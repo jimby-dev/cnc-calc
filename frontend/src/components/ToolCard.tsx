@@ -91,18 +91,24 @@ export default function ToolCard({ tool, onDelete, onEdit }: ToolCardProps) {
 
       <div className="card-content">
         <div className="space-y-2">
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Diameter:</span>
-            <span className="font-medium">{tool.geometry.diameter}mm</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Flute Length:</span>
-            <span className="font-medium">{tool.geometry.fluteLength}mm</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-gray-500">Overall Length:</span>
-            <span className="font-medium">{tool.geometry.overallLength}mm</span>
-          </div>
+          {'diameter' in tool.geometry && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Diameter:</span>
+              <span className="font-medium">{tool.geometry.diameter}mm</span>
+            </div>
+          )}
+          {'fluteLength' in tool.geometry && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Flute Length:</span>
+              <span className="font-medium">{tool.geometry.fluteLength}mm</span>
+            </div>
+          )}
+          {'overallLength' in tool.geometry && (
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-500">Overall Length:</span>
+              <span className="font-medium">{tool.geometry.overallLength}mm</span>
+            </div>
+          )}
           
           {/* Tool-specific geometry */}
           {'fluteCount' in tool.geometry && (

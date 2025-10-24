@@ -23,6 +23,7 @@ out/
 **/out/
 
 # Environment files
+backend/.venv/
 .env
 .env.local
 .env.development.local

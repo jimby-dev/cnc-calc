@@ -19,9 +19,10 @@ export default function ToolWizard({ onClose, onSave, initialTool }: ToolWizardP
   const [toolData, setToolData] = useState<Partial<Tool>>({
     name: '',
     vendor: '',
-    type: 'end_mill',
+    type: 'End Mill',
     geometry: {} as ToolGeometry,
     limits: {},
+    units: 'mm',
     ...initialTool,
   });
 
@@ -68,6 +69,7 @@ export default function ToolWizard({ onClose, onSave, initialTool }: ToolWizardP
       type: toolData.type!,
       geometry: toolData.geometry,
       limits: toolData.limits,
+      units: toolData.units || 'mm',
       createdAt: toolData.createdAt || new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

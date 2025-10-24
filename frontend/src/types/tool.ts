@@ -1,10 +1,10 @@
 export type ToolType = 
-  | 'end_mill'
-  | 'ball_end_mill'
-  | 'chamfer'
-  | 'drill'
-  | 'reamer'
-  | 'thread_mill';
+  | 'End Mill'
+  | 'Ball End Mill'
+  | 'Chamfer'
+  | 'Drill'
+  | 'Reamer'
+  | 'Thread Mill';
 
 export interface ToolMeta {
   id: string;
@@ -71,6 +71,8 @@ export type ToolGeometry =
   | ReamerGeometry
   | ThreadMillGeometry;
 
+export type Geometry = ToolGeometry;
+
 export interface ToolLimits {
   sfm?: number; // Surface feet per minute
   stepdown?: number; // mm
@@ -82,6 +84,7 @@ export interface ToolLimits {
 export interface Tool extends ToolMeta {
   geometry: ToolGeometry;
   limits?: ToolLimits;
+  units: 'mm' | 'inch';
 }
 
 export interface ValidationError {

@@ -17,42 +17,42 @@ interface ToolTypeSelectionProps {
 
 const toolTypes = [
   {
-    id: 'end_mill' as ToolType,
+    id: 'End Mill' as ToolType,
     name: 'End Mill',
     description: 'Square end cutting tool for milling operations',
     icon: WrenchScrewdriverIcon,
     features: ['Square end', 'Multiple flutes', 'Helix angle', 'Corner radius']
   },
   {
-    id: 'ball_end_mill' as ToolType,
+    id: 'Ball End Mill' as ToolType,
     name: 'Ball End Mill',
     description: 'Spherical end for 3D contouring and finishing',
     icon: CircleStackIcon,
     features: ['Spherical end', '3D contouring', 'Finishing operations']
   },
   {
-    id: 'chamfer' as ToolType,
+    id: 'Chamfer' as ToolType,
     name: 'Chamfer Mill',
     description: 'Angled cutting tool for chamfering edges',
     icon: ArrowDownIcon,
     features: ['Angled cutting', 'Edge chamfering', 'V-shaped profile']
   },
   {
-    id: 'drill' as ToolType,
+    id: 'Drill' as ToolType,
     name: 'Drill',
     description: 'Pointed tool for creating holes',
     icon: ArrowUpIcon,
     features: ['Pointed tip', 'Hole drilling', 'Point angle']
   },
   {
-    id: 'reamer' as ToolType,
+    id: 'Reamer' as ToolType,
     name: 'Reamer',
     description: 'Precision tool for finishing holes',
     icon: BoltIcon,
     features: ['Precision finishing', 'Tight tolerances', 'Lead angle']
   },
   {
-    id: 'thread_mill' as ToolType,
+    id: 'Thread Mill' as ToolType,
     name: 'Thread Mill',
     description: 'Tool for creating internal or external threads',
     icon: ArrowRightIcon,

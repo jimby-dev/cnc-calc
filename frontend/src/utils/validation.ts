@@ -39,22 +39,22 @@ export function validateTool(tool: Partial<Tool>): ValidationError[] {
 
   // Geometry validation based on tool type
   switch (tool.type) {
-    case 'end_mill':
+    case 'End Mill':
       errors.push(...validateEndMillGeometry(tool.geometry));
       break;
-    case 'ball_end_mill':
+    case 'Ball End Mill':
       errors.push(...validateBallEndMillGeometry(tool.geometry));
       break;
-    case 'chamfer':
+    case 'Chamfer':
       errors.push(...validateChamferGeometry(tool.geometry));
       break;
-    case 'drill':
+    case 'Drill':
       errors.push(...validateDrillGeometry(tool.geometry));
       break;
-    case 'reamer':
+    case 'Reamer':
       errors.push(...validateReamerGeometry(tool.geometry));
       break;
-    case 'thread_mill':
+    case 'Thread Mill':
       errors.push(...validateThreadMillGeometry(tool.geometry));
       break;
   }

@@ -90,18 +90,24 @@ export default function ReviewValidation({ tool, onMetadataChange }: ReviewValid
             <div>
               <h5 className="font-medium text-gray-900 mb-3">Geometry</h5>
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Diameter:</span>
-                  <span className="font-medium">{tool.geometry.diameter}mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Flute Length:</span>
-                  <span className="font-medium">{tool.geometry.fluteLength}mm</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Overall Length:</span>
-                  <span className="font-medium">{tool.geometry.overallLength}mm</span>
-                </div>
+                {'diameter' in tool.geometry && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Diameter:</span>
+                    <span className="font-medium">{tool.geometry.diameter}mm</span>
+                  </div>
+                )}
+                {'fluteLength' in tool.geometry && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Flute Length:</span>
+                    <span className="font-medium">{tool.geometry.fluteLength}mm</span>
+                  </div>
+                )}
+                {'overallLength' in tool.geometry && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Overall Length:</span>
+                    <span className="font-medium">{tool.geometry.overallLength}mm</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
