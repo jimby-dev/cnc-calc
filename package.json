@@ -1,0 +1,56 @@
+{
+  "name": "cnc-calc",
+  "version": "1.0.0",
+  "description": "Online aide for cnc machinist",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "build": "npm run build:frontend && npm run build:backend",
+    "build:frontend": "cd frontend && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "test": "npm run test:frontend && npm run test:backend",
+    "test:frontend": "cd frontend && npm run test",
+    "test:backend": "cd backend && npm run test",
+    "lint": "npm run lint:frontend && npm run lint:backend",
+    "lint:frontend": "cd frontend && npm run lint",
+    "lint:backend": "cd backend && npm run lint",
+    "format": "npm run format:frontend && npm run format:backend",
+    "format:frontend": "cd frontend && npm run format",
+    "format:backend": "cd backend && npm run format",
+    "deploy": "npm run deploy:infra && npm run deploy:backend && npm run deploy:frontend",
+    "deploy:infra": "cd infra && npm run deploy",
+    "deploy:backend": "cd backend && npm run deploy",
+    "deploy:frontend": "cd frontend && npm run deploy",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "clean": "npm run clean:frontend && npm run clean:backend",
+    "clean:frontend": "cd frontend && npm run clean",
+    "clean:backend": "cd backend && npm run clean"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=9.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/your-username/cnc-calc.git"
+  },
+  "keywords": [
+    "cnc",
+    "machining",
+    "tools",
+    "calculator",
+    "fusion360"
+  ],
+  "author": "contact.jameslong@gmail.com",
+  "license": "MIT"
+}

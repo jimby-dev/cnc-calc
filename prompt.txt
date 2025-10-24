@@ -1,0 +1,342 @@
+# Full-Stack AWS Application Scaffolding Template
+## Project Configuration
+Replace these template variables throughout the prompt:
+- {{PROJECT_NAME}} - cnc-calc
+- {{PROJECT_TYPE}} - SaaS
+- {{PROJECT_DESCRIPTION}} - online aide for cnc machinist
+- {{ORGANIZATION_NAME}} - n/a
+- {{CONTACT_EMAIL}} - contact.jameslong@gmail.com
+- {{FRONTEND_FRAMEWORK}} - nextjs
+- {{BACKEND_FRAMEWORK}} - fastapi
+- {{DATABASE_TYPE}} - postgresql on rds
+- {{DEPLOYMENT_TYPE}} - ecs
+
+## Repository Structure
+Create this monorepo structure:
+```
+{{PROJECT_NAME}}/
+├── .github/workflows/
+├── .cursor/
+├── .vscode/
+├── frontend/
+├── backend/
+├── infra/
+├── scripts/
+├── docs/
+├── monitoring/
+├── tests/
+├── config/
+├── README.md
+├── Makefile
+├── docker-compose.yml
+└── .gitignore
+```
+
+## .vscode/ Configuration (Critical for Speed)
+Create .vscode/ directory with:
+- **settings.json**: Auto-format on save, TypeScript strict mode, ESLint integration
+- **extensions.json**: Required extensions (ES7+ React/Redux, Python, AWS Toolkit, Docker)
+- **launch.json**: Debug configurations for frontend and backend
+- **tasks.json**: Build, test, and deploy tasks
+- **devcontainer.json**: One-click development environment setup
+This ensures developers can clone the repo and immediately have a fully configured Cursor environment.
+## Makefile (Old School Dev Ergonomics)
+Create a Makefile with these essential commands:
+**Setup & Development:**
+- `make setup` - Complete project setup (check prereqs, install deps, configure)
+- `make dev` - Start full development environment
+- `make build` - Build both frontend and backend
+- `make test` - Run all tests
+- `make clean` - Clean all build artifacts
+- `make container-install` - Install container tool (Docker on Linux, Apple Container on macOS)
+**Database & Services:**
+- `make db-up` - Start local database
+- `make db-seed` - Seed database with sample data
+- `make docker-up` - Start all services (auto-detects: Docker on Linux, Apple Container on macOS)
+- `make docker-down` - Stop all services
+**Deployment:**
+- `make deploy-dev` - Deploy to development
+- `make deploy-staging` - Deploy to staging
+- `make deploy-prod` - Deploy to production
+- `make infra-up` - Deploy infrastructure
+**Code Quality:**
+- `make lint` - Lint all code
+- `make format` - Format all code
+- `make type-check` - Type checking
+- `make security-scan` - Security vulnerability scan
+**Help:**
+- `make help` - Show all available commands
+- `make status` - Show project status and health
+This provides universal, discoverable commands that work on any system (Linux, macOS, Windows with WSL).
+## Root-Level Files
+### package.json
+Create root-level package.json with scripts for:
+- dev: Start both frontend and backend
+- build: Build both applications
+- test: Run all tests
+- lint: Lint all code
+- format: Format all code
+- deploy: Deploy to AWS
+- docker:up/down: Docker management
+- clean: Clean build artifacts
+
+### Smart Container Configuration
+Create development environment with automatic system detection:
+- **Frontend service** (port 3000) - Next.js/React development server
+- **Backend service** (port 8000) - FastAPI/Django API server
+- **Database service** (PostgreSQL/Redis) - Local database with sample data
+- **Nginx reverse proxy** - Load balancing and SSL termination
+- **Monitoring service** (Grafana) - Application metrics dashboard
+**Cross-Platform Support:**
+- **Linux**: Uses Docker and docker-compose
+- **macOS**: Uses [Apple Container tool](https://github.com/apple/container) for native Apple Silicon performance
+- **Windows**: Uses Docker Desktop or WSL2
+- **Auto-detection**: Makefile automatically chooses the right tool
+- **OCI-compatible**: Works with existing container images
+### .gitignore
+Comprehensive gitignore for:
+- Dependencies (node_modules, **pycache**)
+- Build outputs (.next, dist, build)
+- Environment files (.env\*)
+- IDE files (.vscode, .idea)
+- OS files (.DS_Store)
+- Logs and cache files
+- AWS and Terraform files
+
+## Frontend Setup
+Based on {{FRONTEND_FRAMEWORK}}:
+- Next.js: Use create-next-app with TypeScript, Tailwind, App Router
+- React: Use create-react-app with TypeScript, add Tailwind
+- Vue: Use create-vue with TypeScript, Router, Pinia, Vitest
+- Svelte: Use create-svelte with TypeScript
+Essential dependencies:
+- UI components (@headlessui/react, @heroicons/react)
+- HTTP client (axios, swr)
+- Testing (@playwright/test, @testing-library/\*)
+- Code quality (eslint, prettier)
+
+## User Flows (Functional UX)
+
+Dashboard
+
+Displays tool library with filters, search, and actions.
+
+Users can create, import, edit, duplicate, export, or delete tool profiles.
+
+Wizard (4 Steps)
+
+Select Tool Type: Cards for each type (End Mill, Ball End Mill, Chamfer, Drill, Reamer, Thread Mill).
+
+Define Geometry: Dynamic form by tool type; live SVG preview showing tool cross‑section that updates instantly as fields change.
+
+Review & Validate: Read‑only summary with Fusion readiness warnings and the option to preview export data.
+
+Export: Choose format (.tools JSON or .csv) and download or copy link. Tool is saved and displayed on dashboard.
+
+UX Rules
+
+Inputs dynamically update visuals with minimal latency.
+
+Real‑time validation prevents invalid exports.
+
+Unit toggle for inch/mm, consistent conversions.
+
+Responsive layout with accessible labels and tooltips.
+
+## Data Model (Conceptual Overview)
+
+Core Objects: ToolMeta, Geometry, Limits.
+
+ToolMeta: Metadata like name, vendor, type, timestamps.
+
+Geometry: Varies by tool type (End Mill, Ball, Chamfer, Drill, etc.). Contains dimensions like diameter, flute length, overall length, angles, and tip flat.
+
+Limits: Optional performance and operating recommendations such as SFM, stepdowns, and engagement percentages.
+
+Units: Always stored in millimeters; UI supports inch/mm toggle.
+
+Database Tables
+
+tools: Stores metadata (name, vendor, type, timestamps).
+
+tool_geometry: Stores validated JSON geometry definitions in mm.
+
+tool_limits: Stores optional cutting and performance limits.
+
+API Endpoints
+
+Create, retrieve, update, delete, and list tools.
+
+Export endpoints for Fusion JSON and CSV.
+
+Validation endpoint for Fusion readiness.
+
+## Geometry Forms (Per Tool Type)
+
+Each tool type presents a tailored form:
+
+End Mill (Square): Diameter, flute count, helix angle, flute length, length of cut, overall length, corner radius.
+
+Ball End Mill: Diameter, flute count, tip radius, flute length, overall length.
+
+Chamfer/V‑Mill: Included angle, tip flat, flute length, overall length, shank diameter.
+
+Drill: Diameter, point angle, flute length, overall length.
+
+Reamer: Diameter, flute length, overall length, optional lead angle.
+
+Thread Mill: Diameter, pitch, maximum thread length, flute length, overall length.
+
+## Dynamic Geometry Visualization
+
+Purpose: Show an accurate visual representation that adjusts instantly as user inputs change.
+
+Core Requirements
+
+2D parametric SVG preview with real‑time updates.
+
+Cross‑section view showing labeled dimensions and active highlights.
+
+Optional toggle for 3D revolve preview using Three.js.
+
+Adjustable scaling to keep geometry centered and legible.
+
+Behavior
+
+Input changes trigger SVG updates within 100 ms.
+
+Hovering a label highlights corresponding geometry.
+
+Chamfer tools show computed width based on depth slider and included angle.
+
+Error states indicated visually with red outlines.
+
+## Validation & Fusion Readiness
+
+Critical Rules (Blocking Export)
+
+Geometry relationships (e.g., length of cut ≤ flute length ≤ overall length).
+
+Chamfer tools require both included angle and tip flat.
+
+Ball end mills require tip radius equal to half the diameter.
+
+Neck diameter must be smaller than shank diameter.
+
+Non‑Blocking Warnings
+
+Unusual helix angles or corner radii.
+
+Small or unrealistic tip flats.
+
+Fusion Compatibility Checks
+
+Verify required fields for each tool type.
+
+Normalize units and angle precision.
+
+## Export Specifications
+
+Fusion .tools JSON Export
+
+API endpoint returns a .tools JSON file compatible with Fusion 360.
+
+Supports both metric and imperial outputs, configurable via query parameters.
+
+Ensures proper field mapping (e.g., chamfer tip flat → Fusion tip diameter).
+
+CSV Export
+
+Provides Fusion‑compatible CSV output with defined headers.
+
+Includes required geometry fields; leaves irrelevant cells blank.
+
+Frontend Download Flow
+
+Direct download via export endpoint or client‑side blob handling.
+
+User feedback shown after successful export.
+
+
+
+## Backend Setup
+Based on {{BACKEND_FRAMEWORK}}:
+- FastAPI: Use uvicorn, pydantic, boto3, aioboto3
+- Django: Use djangorestframework, django-cors-headers
+- Express: Use express, cors, helmet, morgan
+- Flask: Use flask, flask-cors, gunicorn
+Essential dependencies:
+- Authentication (python-jose, passlib)
+- Database (boto3, psycopg2, pymongo)
+- Testing (pytest, httpx)
+- Code quality (black, pylint, mypy)
+
+## Infrastructure Setup (infra/)
+Create CloudFormation templates:
+- main.yml: Root stack with nested stacks
+- networking-stack.yml: VPC, subnets, security groups
+- database-stack.yml: DynamoDB/PostgreSQL tables
+- auth-stack.yml: Cognito user pool
+- backend-stack.yml: ECS/Lambda deployment
+- frontend-stack.yml: S3/CloudFront distribution
+
+## GitHub Actions (.github/workflows/)
+Create CI/CD pipelines:
+- ci-cd.yml: Main pipeline with test, build, deploy jobs
+- security-scan.yml: Security scanning with Trivy
+- Include frontend CI, backend CI, infrastructure validation
+- Use OIDC for AWS authentication
+- Deploy to staging first, then production
+
+## Testing Infrastructure
+- Unit tests: Jest for frontend, pytest for backend
+- Integration tests: API testing with httpx/requests
+- E2E tests: Playwright for browser testing
+- Performance tests: Lighthouse CI
+- Security tests: Trivy vulnerability scanning
+
+## Monitoring Setup
+- Grafana dashboards for application metrics
+- Prometheus alerting rules
+- CloudWatch integration
+- Structured logging (JSON format)
+- Health checks for all services
+
+## Configuration Management
+- development.env: Local development settings
+- production.env: Production environment variables
+- Use AWS Secrets Manager for sensitive data
+- Environment-specific configurations
+
+## Documentation
+- README.md: Project overview and setup instructions
+- API.md: API documentation with endpoints
+- DEPLOYMENT.md: Deployment guide
+- Include troubleshooting and getting help sections
+
+## Cursor Rules (.cursor/)
+Create development guidelines for:
+- Frontend: Next.js/React performance, accessibility, security
+- Backend: FastAPI/Python architecture, API design, security
+- Infrastructure: CloudFormation best practices, security, cost optimization
+- GitHub Actions: CI/CD best practices, security, AWS integration
+
+## Key Features
+- **Instant Onboarding**: Clone repo → `make setup` → `make dev` → coding in 2 minutes
+- **Zero Configuration**: Pre-configured .vscode/, ESLint, TypeScript, debugging
+- **One-Command Everything**: `make dev`, `make test`, `make deploy-prod`
+- **Template Variables**: Complete customization without code changes
+- **Production-Ready**: AWS infrastructure, CI/CD, monitoring, security
+- **Cross-Platform Smart**: Auto-detects system and uses optimal containerization tool
+## Developer Experience (Speed Focus)
+**Clone to Coding in 2 Minutes:**
+1. `git clone <repo>`
+2. `make setup` (installs everything)
+3. `make dev` (starts full stack)
+4. Open Cursor → everything works immediately
+**No Manual Configuration:**
+- .vscode/ pre-configured for Cursor
+- Auto-formatting, linting, debugging ready
+- Hot reload for frontend and backend
+- Database with sample data
+- API endpoints working immediately
