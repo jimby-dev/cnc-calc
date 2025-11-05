@@ -146,6 +146,10 @@ jobs:
     needs: [frontend-test, backend-test, security-scan]
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    permissions:
+      id-token: write   # Required for OIDC
+      contents: read
 
     steps:
       - name: Checkout code
@@ -154,49 +158,127 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
+          role-to-assume: arn:aws:iam::986341372774:role/GitHubActionsECSRole
+          aws-region: us-east-2
 
-      - name: Deploy infrastructure
+      - name: Deploy main infrastructure
         run: |
           cd infra
           aws cloudformation deploy \
             --template-file main.yml \
-            --stack-name cnc-calc-prod \
-            --parameter-overrides Environment=prod \
-            --capabilities CAPABILITY_IAM
+            --stack-name cnc-calc-main-prod \
+            --parameter-overrides \
+              Environment=prod \
+              DatabasePassword=${{ secrets.DATABASE_PASSWORD }} \
+            --capabilities CAPABILITY_IAM \
+            --region us-east-2
 
-      - name: Build and push Docker images
+      - name: Deploy ECS cluster and ECR repositories
         run: |
-          # Build frontend image
-          docker build -t cnc-calc-frontend:latest ./frontend
-          docker tag cnc-calc-frontend:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/cnc-calc-frontend:latest
+          cd infra
+          aws cloudformation deploy \
+            --template-file ecs-cluster.yml \
+            --stack-name cnc-calc-ecs-cluster-prod \
+            --parameter-overrides Environment=prod \
+            --region us-east-2
 
-          # Build backend image
-          docker build -t cnc-calc-backend:latest ./backend
-          docker tag cnc-calc-backend:latest ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/cnc-calc-backend:latest
+      - name: Get database endpoint
+        id: get-db
+        run: |
+          DB_ENDPOINT=$(aws cloudformation describe-stacks \
+            --stack-name cnc-calc-main-prod \
+            --query 'Stacks[0].Outputs[?OutputKey==`DatabaseEndpoint`].OutputValue' \
+            --output text \
+            --region us-east-2)
+          echo "db_endpoint=$DB_ENDPOINT" >> $GITHUB_OUTPUT
+
+      - name: Deploy task definitions
+        run: |
+          cd infra
+          aws cloudformation deploy \
+            --template-file task-definitions.yml \
+            --stack-name cnc-calc-task-definitions-prod \
+            --parameter-overrides \
+              Environment=prod \
+              ClusterStackName=cnc-calc-ecs-cluster-prod \
+              DatabaseEndpoint=${{ steps.get-db.outputs.db_endpoint }} \
+              DatabaseName=cnc_calc \
+              DatabaseUser=cnc_user \
+              DatabasePassword=${{ secrets.DATABASE_PASSWORD }} \
+              BackendURL=http://placeholder-backend-url \
+            --capabilities CAPABILITY_IAM \
+            --region us-east-2
+
+      - name: Get task definition ARNs
+        id: get-task-defs
+        run: |
+          BACKEND_TD=$(aws cloudformation describe-stacks \
+            --stack-name cnc-calc-task-definitions-prod \
+            --query 'Stacks[0].Outputs[?OutputKey==`BackendTaskDefinitionArn`].OutputValue' \
+            --output text \
+            --region us-east-2)
+          FRONTEND_TD=$(aws cloudformation describe-stacks \
+            --stack-name cnc-calc-task-definitions-prod \
+            --query 'Stacks[0].Outputs[?OutputKey==`FrontendTaskDefinitionArn`].OutputValue' \
+            --output text \
+            --region us-east-2)
+          echo "backend_td=$BACKEND_TD" >> $GITHUB_OUTPUT
+          echo "frontend_td=$FRONTEND_TD" >> $GITHUB_OUTPUT
+
+      - name: Deploy ECS services
+        run: |
+          cd infra
+          aws cloudformation deploy \
+            --template-file services.yml \
+            --stack-name cnc-calc-services-prod \
+            --parameter-overrides \
+              Environment=prod \
+              ClusterStackName=cnc-calc-ecs-cluster-prod \
+              TaskDefinitionsStackName=cnc-calc-task-definitions-prod \
+              MainStackName=cnc-calc-main-prod \
+              BackendTaskDefinitionArn=${{ steps.get-task-defs.outputs.backend_td }} \
+              FrontendTaskDefinitionArn=${{ steps.get-task-defs.outputs.frontend_td }} \
+            --region us-east-2
 
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Push images to ECR
+      - name: Build and push backend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: cnc-calc-backend
+          IMAGE_TAG: ${{ github.sha }}
         run: |
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/cnc-calc-frontend:latest
-          docker push ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.us-east-1.amazonaws.com/cnc-calc-backend:latest
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./backend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Build and push frontend image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_REPOSITORY: cnc-calc-frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG ./frontend
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
 
       - name: Deploy to ECS
         run: |
           aws ecs update-service \
-            --cluster cnc-calc-prod \
-            --service cnc-calc-frontend \
-            --force-new-deployment
+            --cluster cnc-calc-cluster \
+            --service cnc-calc-backend-service \
+            --force-new-deployment \
+            --region us-east-2
 
           aws ecs update-service \
-            --cluster cnc-calc-prod \
-            --service cnc-calc-backend \
-            --force-new-deployment
+            --cluster cnc-calc-cluster \
+            --service cnc-calc-frontend-service \
+            --force-new-deployment \
+            --region us-east-2
 
   # E2E Tests (only on main branch)
   e2e-test:

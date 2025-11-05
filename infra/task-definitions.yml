@@ -1,0 +1,180 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CNC Calculator - ECS Task Definitions'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+
+  ClusterStackName:
+    Type: String
+    Description: Name of the ECS Cluster stack (to import ECR URIs and log groups)
+    Default: cnc-calc-ecs-cluster-prod
+
+  DatabaseEndpoint:
+    Type: String
+    Description: RDS Database Endpoint (from main stack)
+    Default: ''
+
+  DatabaseName:
+    Type: String
+    Description: Database name
+    Default: cnc_calc
+
+  DatabaseUser:
+    Type: String
+    Description: Database username
+    Default: cnc_user
+
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    Description: Database password
+    Default: 'ChangeMe123!'
+
+  BackendURL:
+    Type: String
+    Description: Backend URL for frontend (can be updated later)
+    Default: http://placeholder-backend-url
+
+Resources:
+  # ECS Task Execution Role (for pulling images and writing logs)
+  ECSTaskExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: cnc-calc-ecs-task-execution-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+      Policies:
+        - PolicyName: ECRAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecr:GetAuthorizationToken
+                  - ecr:BatchCheckLayerAvailability
+                  - ecr:GetDownloadUrlForLayer
+                  - ecr:BatchGetImage
+                Resource: '*'
+
+  # ECS Task Role (for application to access AWS services)
+  ECSTaskRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: cnc-calc-ecs-task-role
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: ecs-tasks.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudWatchLogsAccess
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: !Sub 'arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/ecs/cnc-calc-*:*'
+
+  # Backend Task Definition
+  BackendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: cnc-calc-backend
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '512'
+      Memory: '1024'
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ContainerDefinitions:
+        - Name: backend
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/cnc-calc-backend:latest'
+          Essential: true
+          PortMappings:
+            - ContainerPort: 8000
+              Protocol: tcp
+          Environment:
+            - Name: DATABASE_URL
+              Value: !Sub 
+                - 'postgresql://${DBUser}:${DBPassword}@${DBEndpoint}:5432/${DBName}'
+                - DBUser: !Ref DatabaseUser
+                  DBPassword: !Ref DatabasePassword
+                  DBEndpoint: !Ref DatabaseEndpoint
+                  DBName: !Ref DatabaseName
+            - Name: ENVIRONMENT
+              Value: !Ref Environment
+            - Name: CORS_ORIGINS
+              Value: '*'
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/cnc-calc-backend
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+  # Frontend Task Definition
+  FrontendTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: cnc-calc-frontend
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      Cpu: '256'
+      Memory: '512'
+      ExecutionRoleArn: !GetAtt ECSTaskExecutionRole.Arn
+      TaskRoleArn: !GetAtt ECSTaskRole.Arn
+      ContainerDefinitions:
+        - Name: frontend
+          Image: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/cnc-calc-frontend:latest'
+          Essential: true
+          PortMappings:
+            - ContainerPort: 3000
+              Protocol: tcp
+          Environment:
+            - Name: NEXT_PUBLIC_BACKEND_URL
+              Value: !Ref BackendURL
+            - Name: NODE_ENV
+              Value: production
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: /ecs/cnc-calc-frontend
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: ecs
+
+Outputs:
+  BackendTaskDefinitionArn:
+    Description: Backend Task Definition ARN
+    Value: !Ref BackendTaskDefinition
+    Export:
+      Name: !Sub '${AWS::StackName}-Backend-TaskDefinition-ARN'
+
+  FrontendTaskDefinitionArn:
+    Description: Frontend Task Definition ARN
+    Value: !Ref FrontendTaskDefinition
+    Export:
+      Name: !Sub '${AWS::StackName}-Frontend-TaskDefinition-ARN'
+
+  TaskExecutionRoleArn:
+    Description: Task Execution Role ARN
+    Value: !GetAtt ECSTaskExecutionRole.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-TaskExecutionRole-ARN'
+

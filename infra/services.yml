@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CNC Calculator - ECS Services'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+
+  ClusterStackName:
+    Type: String
+    Description: Name of the ECS Cluster stack
+    Default: cnc-calc-ecs-cluster-prod
+
+  TaskDefinitionsStackName:
+    Type: String
+    Description: Name of the Task Definitions stack
+    Default: cnc-calc-task-definitions-prod
+
+  MainStackName:
+    Type: String
+    Description: Name of the Main Infrastructure stack (for VPC, subnets, security groups)
+    Default: cnc-calc-main-prod
+
+  BackendTaskDefinitionArn:
+    Type: String
+    Description: Backend Task Definition ARN (from task-definitions stack)
+    Default: ''
+
+  FrontendTaskDefinitionArn:
+    Type: String
+    Description: Frontend Task Definition ARN (from task-definitions stack)
+    Default: ''
+
+Resources:
+  # Security Group for Backend Service
+  BackendSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for backend ECS service
+      GroupName: cnc-calc-backend-sg
+      VpcId:
+        Fn::ImportValue: !Sub '${MainStackName}-VPC-ID'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 8000
+          ToPort: 8000
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP traffic to backend
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-backend-sg'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Security Group for Frontend Service
+  FrontendSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security group for frontend ECS service
+      GroupName: cnc-calc-frontend-sg
+      VpcId:
+        Fn::ImportValue: !Sub '${MainStackName}-VPC-ID'
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 3000
+          ToPort: 3000
+          CidrIp: 0.0.0.0/0
+          Description: Allow HTTP traffic to frontend
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+          Description: Allow all outbound traffic
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-frontend-sg'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Backend ECS Service
+  BackendService:
+    Type: AWS::ECS::Service
+    DependsOn: BackendSecurityGroup
+    Properties:
+      ServiceName: cnc-calc-backend-service
+      Cluster: cnc-calc-cluster
+      TaskDefinition: !Ref BackendTaskDefinitionArn
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - Fn::ImportValue: !Sub '${MainStackName}-PublicSubnet1-ID'
+            - Fn::ImportValue: !Sub '${MainStackName}-PublicSubnet2-ID'
+          SecurityGroups:
+            - !Ref BackendSecurityGroup
+      HealthCheckGracePeriodSeconds: 60
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-backend-service'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # Frontend ECS Service
+  FrontendService:
+    Type: AWS::ECS::Service
+    DependsOn: FrontendSecurityGroup
+    Properties:
+      ServiceName: cnc-calc-frontend-service
+      Cluster: cnc-calc-cluster
+      TaskDefinition: !Ref FrontendTaskDefinitionArn
+      DesiredCount: 1
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - Fn::ImportValue: !Sub '${MainStackName}-PublicSubnet1-ID'
+            - Fn::ImportValue: !Sub '${MainStackName}-PublicSubnet2-ID'
+          SecurityGroups:
+            - !Ref FrontendSecurityGroup
+      HealthCheckGracePeriodSeconds: 60
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 100
+        DeploymentCircuitBreaker:
+          Enable: true
+          Rollback: true
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-frontend-service'
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  BackendServiceName:
+    Description: Backend Service Name
+    Value: !Ref BackendService
+    Export:
+      Name: !Sub '${AWS::StackName}-Backend-Service-Name'
+
+  FrontendServiceName:
+    Description: Frontend Service Name
+    Value: !Ref FrontendService
+    Export:
+      Name: !Sub '${AWS::StackName}-Frontend-Service-Name'
+
+  BackendSecurityGroupId:
+    Description: Backend Security Group ID
+    Value: !Ref BackendSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-Backend-SecurityGroup-ID'
+
+  FrontendSecurityGroupId:
+    Description: Frontend Security Group ID
+    Value: !Ref FrontendSecurityGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-Frontend-SecurityGroup-ID'

@@ -1,0 +1,155 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'CNC Calculator - ECS Cluster and ECR Repositories'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: prod
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+
+Resources:
+  # ECS Cluster
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: cnc-calc-cluster
+      CapacityProviders:
+        - FARGATE
+        - FARGATE_SPOT
+      DefaultCapacityProviderStrategy:
+        - CapacityProvider: FARGATE
+          Weight: 1
+      ClusterSettings:
+        - Name: containerInsights
+          Value: enabled
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-cluster'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ECR Repository for Backend
+  BackendECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: cnc-calc-backend
+      ImageTagMutability: MUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep last 10 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-backend-ecr'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # ECR Repository for Frontend
+  FrontendECRRepository:
+    Type: AWS::ECR::Repository
+    Properties:
+      RepositoryName: cnc-calc-frontend
+      ImageTagMutability: MUTABLE
+      ImageScanningConfiguration:
+        ScanOnPush: true
+      LifecyclePolicy:
+        LifecyclePolicyText: |
+          {
+            "rules": [
+              {
+                "rulePriority": 1,
+                "description": "Keep last 10 images",
+                "selection": {
+                  "tagStatus": "any",
+                  "countType": "imageCountMoreThan",
+                  "countNumber": 10
+                },
+                "action": {
+                  "type": "expire"
+                }
+              }
+            ]
+          }
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-frontend-ecr'
+        - Key: Environment
+          Value: !Ref Environment
+
+  # CloudWatch Log Groups
+  BackendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/cnc-calc-backend
+      RetentionInDays: 7
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-backend-logs'
+        - Key: Environment
+          Value: !Ref Environment
+
+  FrontendLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: /ecs/cnc-calc-frontend
+      RetentionInDays: 7
+      Tags:
+        - Key: Name
+          Value: !Sub 'cnc-calc-${Environment}-frontend-logs'
+        - Key: Environment
+          Value: !Ref Environment
+
+Outputs:
+  ClusterName:
+    Description: ECS Cluster Name
+    Value: !Ref ECSCluster
+    Export:
+      Name: !Sub '${AWS::StackName}-Cluster-Name'
+
+  ClusterArn:
+    Description: ECS Cluster ARN
+    Value: !GetAtt ECSCluster.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-Cluster-ARN'
+
+  BackendECRRepositoryUri:
+    Description: Backend ECR Repository URI
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/cnc-calc-backend'
+    Export:
+      Name: !Sub '${AWS::StackName}-Backend-ECR-URI'
+
+  FrontendECRRepositoryUri:
+    Description: Frontend ECR Repository URI
+    Value: !Sub '${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/cnc-calc-frontend'
+    Export:
+      Name: !Sub '${AWS::StackName}-Frontend-ECR-URI'
+
+  BackendLogGroup:
+    Description: Backend CloudWatch Log Group
+    Value: !Ref BackendLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-Backend-LogGroup'
+
+  FrontendLogGroup:
+    Description: Frontend CloudWatch Log Group
+    Value: !Ref FrontendLogGroup
+    Export:
+      Name: !Sub '${AWS::StackName}-Frontend-LogGroup'
+

@@ -13,6 +13,13 @@ Parameters:
     Default: 10.0.0.0/16
     Description: CIDR block for VPC
 
+  DatabasePassword:
+    Type: String
+    NoEcho: true
+    Description: Master password for RDS PostgreSQL database (8-128 characters)
+    MinLength: 8
+    MaxLength: 128
+
 Resources:
   # VPC and Networking
   VPC:
