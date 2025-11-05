@@ -21,6 +21,8 @@ out/
 **/dist/
 **/build/
 **/out/
+*.tsbuildinfo
+**/*.tsbuildinfo
 
 # Environment files
 .venv/
