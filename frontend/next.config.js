@@ -1,19 +1,20 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  experimental: {
-    appDir: true,
-  },
   images: {
     domains: ['localhost'],
   },
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000',
-  },
   async rewrites() {
+    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+    
+    // Only add rewrites if backend URL is defined and valid
+    if (!backendUrl || backendUrl === 'undefined') {
+      return [];
+    }
+    
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL}/api/:path*`,
+        destination: `${backendUrl}/api/:path*`,
       },
     ];
   },
