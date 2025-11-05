@@ -106,9 +106,9 @@ export default function ToolWizard({ onClose, onSave, initialTool }: ToolWizardP
           <GeometryForm
             toolType={toolData.type!}
             geometry={toolData.geometry}
-            metadata={toolData}
-            onGeometryChange={handleGeometryChange}
-            onMetadataChange={handleMetadataChange}
+            onUpdateGeometry={handleGeometryChange}
+            units={toolData.units || 'mm'}
+            onToggleUnits={(units) => setToolData(prev => ({ ...prev, units }))}
           />
         );
       case 3:
@@ -122,7 +122,6 @@ export default function ToolWizard({ onClose, onSave, initialTool }: ToolWizardP
         return (
           <ExportOptions
             tool={toolData as Tool}
-            onSave={handleSave}
           />
         );
       default:

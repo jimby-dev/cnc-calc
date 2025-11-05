@@ -1,0 +1,10 @@
+name: "CNC Calc CodeQL Config"
+
+paths-ignore:
+  - '**/*.c'
+  - '**/*.cpp'
+  - '**/*.h'
+  - '**/*.hpp'
+  - '**/*.cc'
+  - '**/*.cxx'
+
