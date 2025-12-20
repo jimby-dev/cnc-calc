@@ -1,5 +1,14 @@
-from typing import List, Dict, Any
+"""
+Validation service for tool geometry and Fusion 360 compatibility
+"""
+from typing import List
 from schemas.tool import ToolResponse, ValidationResponse, ValidationError, ToolType
+from app.core.constants import (
+    TYPICAL_HELIX_ANGLE_MIN, TYPICAL_HELIX_ANGLE_MAX,
+    TYPICAL_POINT_ANGLE_MIN, TYPICAL_POINT_ANGLE_MAX,
+    MIN_DIAMETER_MM, MAX_DIAMETER_MM,
+    MIN_OVERALL_LENGTH_MM, MAX_OVERALL_LENGTH_MM
+)
 import structlog
 
 logger = structlog.get_logger()
@@ -113,10 +122,10 @@ class ValidationService:
         
         # Warnings
         if geometry.get("helix_angle"):
-            if geometry["helix_angle"] < 20 or geometry["helix_angle"] > 45:
+            if geometry["helix_angle"] < TYPICAL_HELIX_ANGLE_MIN or geometry["helix_angle"] > TYPICAL_HELIX_ANGLE_MAX:
                 warnings.append(ValidationError(
                     field="helix_angle",
-                    message="Unusual helix angle - typical range is 20-45 degrees",
+                    message=f"Unusual helix angle - typical range is {TYPICAL_HELIX_ANGLE_MIN}-{TYPICAL_HELIX_ANGLE_MAX} degrees",
                     severity="warning"
                 ))
         
@@ -205,10 +214,10 @@ class ValidationService:
         
         # Warnings
         if geometry.get("point_angle"):
-            if geometry["point_angle"] < 90 or geometry["point_angle"] > 150:
+            if geometry["point_angle"] < TYPICAL_POINT_ANGLE_MIN or geometry["point_angle"] > TYPICAL_POINT_ANGLE_MAX:
                 warnings.append(ValidationError(
                     field="point_angle",
-                    message="Unusual point angle - typical range is 90-150 degrees",
+                    message=f"Unusual point angle - typical range is {TYPICAL_POINT_ANGLE_MIN}-{TYPICAL_POINT_ANGLE_MAX} degrees",
                     severity="warning"
                 ))
     
@@ -276,17 +285,17 @@ class ValidationService:
         geometry = tool.geometry
         
         if geometry.get("diameter"):
-            if geometry["diameter"] < 0.1 or geometry["diameter"] > 100:
+            if geometry["diameter"] < MIN_DIAMETER_MM or geometry["diameter"] > MAX_DIAMETER_MM:
                 warnings.append(ValidationError(
                     field="diameter",
-                    message="Diameter outside typical range (0.1-100mm)",
+                    message=f"Diameter outside typical range ({MIN_DIAMETER_MM}-{MAX_DIAMETER_MM}mm)",
                     severity="warning"
                 ))
         
         if geometry.get("overall_length"):
-            if geometry["overall_length"] < 1 or geometry["overall_length"] > 500:
+            if geometry["overall_length"] < MIN_OVERALL_LENGTH_MM or geometry["overall_length"] > MAX_OVERALL_LENGTH_MM:
                 warnings.append(ValidationError(
                     field="overall_length",
-                    message="Overall length outside typical range (1-500mm)",
+                    message=f"Overall length outside typical range ({MIN_OVERALL_LENGTH_MM}-{MAX_OVERALL_LENGTH_MM}mm)",
                     severity="warning"
                 ))

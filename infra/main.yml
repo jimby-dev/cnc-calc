@@ -160,6 +160,7 @@ Resources:
   DBSubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
+      DBSubnetGroupName: !Sub 'cnc-calc-${Environment}-db-subnet-group'
       DBSubnetGroupDescription: Subnet group for RDS
       SubnetIds:
         - !Ref PrivateSubnet1
@@ -171,12 +172,13 @@ Resources:
   # RDS Instance
   Database:
     Type: AWS::RDS::DBInstance
+    DeletionPolicy: Snapshot
     Properties:
       DBInstanceIdentifier: !Sub 'cnc-calc-${Environment}-db'
       DBName: cnc_calc
       DBInstanceClass: db.t3.micro
       Engine: postgres
-      EngineVersion: '15.4'
+      EngineVersion: '15.5'
       MasterUsername: cnc_user
       MasterUserPassword: !Ref DatabasePassword
       AllocatedStorage: 20
@@ -195,6 +197,7 @@ Resources:
   CacheSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
     Properties:
+      CacheSubnetGroupName: !Sub 'cnc-calc-${Environment}-cache-subnet-group'
       Description: Subnet group for ElastiCache
       SubnetIds:
         - !Ref PrivateSubnet1
@@ -218,7 +221,9 @@ Resources:
   # ElastiCache Cluster
   RedisCluster:
     Type: AWS::ElastiCache::CacheCluster
+    DeletionPolicy: Snapshot
     Properties:
+      CacheClusterIdentifier: !Sub 'cnc-calc-${Environment}-redis'
       CacheNodeType: cache.t3.micro
       Engine: redis
       NumCacheNodes: 1

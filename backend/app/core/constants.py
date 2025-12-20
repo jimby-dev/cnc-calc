@@ -1,0 +1,24 @@
+"""
+Application constants
+"""
+# Unit conversion
+MM_TO_INCHES = 25.4
+
+# Rate limiting
+RATE_LIMIT_CLEANUP_INTERVAL_MINUTES = 5
+
+# Export limits
+EXPORT_MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+# Tool geometry validation ranges
+MIN_DIAMETER_MM = 0.1
+MAX_DIAMETER_MM = 100
+MIN_OVERALL_LENGTH_MM = 1
+MAX_OVERALL_LENGTH_MM = 500
+
+# Typical tool parameter ranges
+TYPICAL_HELIX_ANGLE_MIN = 20
+TYPICAL_HELIX_ANGLE_MAX = 45
+TYPICAL_POINT_ANGLE_MIN = 90
+TYPICAL_POINT_ANGLE_MAX = 150
+

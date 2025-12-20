@@ -1,13 +1,23 @@
-from fastapi import FastAPI, HTTPException
+import sys
+from pathlib import Path
+
+# Add backend directory to Python path for engine imports
+backend_dir = Path(__file__).parent
+sys.path.insert(0, str(backend_dir))
+
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 import structlog
 import uvicorn
 
 from app.core.config import settings
-from app.core.database import engine, Base
-from app.api.routers import tools, health
+from app.core.redis_client import close_redis_pool
+from app.core.auth import verify_api_key
+from app.core.rate_limit import RateLimitMiddleware
+from app.api.routers import tools, health, recommend, materials, policies, machines
 
 # Configure structured logging
 structlog.configure(
@@ -39,13 +49,19 @@ app = FastAPI(
     redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
 )
 
+# Rate limiting middleware (applied first)
+app.add_middleware(
+    RateLimitMiddleware,
+    requests_per_minute=settings.RATE_LIMIT_PER_MINUTE
+)
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],  # Restrict to required methods
+    allow_headers=["Content-Type", "X-API-Key"],  # Explicitly allow required headers
 )
 
 # Trusted host middleware
@@ -58,22 +74,23 @@ if settings.ENVIRONMENT == "production":
 # Include routers
 app.include_router(health.router, prefix="/api", tags=["health"])
 app.include_router(tools.router, prefix="/api/tools", tags=["tools"])
+app.include_router(recommend.router, prefix="/api", tags=["recommendations"])
+app.include_router(materials.router, prefix="/api", tags=["materials"])
+app.include_router(policies.router, prefix="/api", tags=["policies"])
+app.include_router(machines.router, prefix="/api", tags=["machines"])
 
 @app.on_event("startup")
 async def startup_event():
     """Initialize application on startup"""
     logger.info("Starting CNC Calculator API", environment=settings.ENVIRONMENT)
-    
-    # Create database tables
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    
-    logger.info("Database tables created successfully")
+    # Note: Database migrations should be run separately using Alembic
+    # Run: alembic upgrade head
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("Shutting down CNC Calculator API")
+    await close_redis_pool()
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):
@@ -91,12 +108,14 @@ async def http_exception_handler(request, exc):
 
 @app.exception_handler(Exception)
 async def general_exception_handler(request, exc):
-    """General exception handler"""
+    """General exception handler - sanitizes error information"""
+    # Log exception type and path, but not full details
+    error_type = type(exc).__name__
     logger.error(
         "Unhandled exception",
-        exception=str(exc),
+        error_type=error_type,
         path=request.url.path,
-        exc_info=True
+        exc_info=True  # Full traceback in logs only, not exposed to user
     )
     return JSONResponse(
         status_code=500,

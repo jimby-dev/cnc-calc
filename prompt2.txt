@@ -1,0 +1,287 @@
+# Full-Stack AWS Application Scaffolding Template (Revised Vision)
+# Output File: prompt2.txt
+#
+# PURPOSE
+# Generate a functional monorepo web application implementing an **Explainable, Policy-Driven Machining Decision Engine**
+# for feeds & speeds + geometry validation, built to be portfolio-grade for DevOps/platform engineering.
+#
+# IMPORTANT
+# - Preserve the underlying frameworks/systems: Next.js (frontend), FastAPI (backend), PostgreSQL (RDS/local), ECS deployment,
+#   GitHub Actions CI/CD (including security scans), CloudFormation (infra), monitoring (Grafana/Prometheus/CloudWatch).
+# - Scrap the old “tool profile editor SaaS” vision. Geometry editing/export exists only insofar as it supports:
+#   (1) importing Fusion tool profiles, (2) validating them, (3) exporting a Fusion-compatible profile/presets.
+# - The *product* is the policy-driven decision engine: deterministic, explainable, auditable recommendations and arbitration.
+# - MVP must run locally via docker-compose and deploy to AWS via GitHub Actions + CloudFormation.
+
+## Project Configuration
+Replace these template variables throughout the prompt:
+- {{PROJECT_NAME}} - machining-decision-engine
+- {{PROJECT_TYPE}} - Policy-Driven Engineering Platform
+- {{PROJECT_DESCRIPTION}} - Explainable feeds & speeds and tool geometry decision engine for CNC machining
+- {{ORGANIZATION_NAME}} - n/a
+- {{CONTACT_EMAIL}} - contact.jameslong@gmail.com
+- {{FRONTEND_FRAMEWORK}} - nextjs (TypeScript, Tailwind, App Router)
+- {{BACKEND_FRAMEWORK}} - fastapi (Python 3.12+, Pydantic v2)
+- {{DATABASE_TYPE}} - postgresql on rds (local postgres in docker-compose for dev)
+- {{DEPLOYMENT_TYPE}} - ecs (Fargate)
+
+---
+
+## High-Level Vision (CRITICAL CONTEXT)
+This application is a **policy-driven machining decision engine** (not “just a calculator”). It must:
+1) Produce deterministic feeds & speeds recommendations plus warnings and confidence
+2) Make trade-offs explicit and explainable
+3) Support optimization intents (tool-life, balanced, time) as **policy profiles**
+4) Support multiple policies at once, detect conflicts, and resolve deterministically via arbitration
+5) Import Fusion 360 tool library JSON to validate tool geometry and export back a Fusion-compatible profile + presets
+6) Treat “explainability” as a first-class output artifact (like an audit log / policy decision trace)
+
+Primary users:
+- Self-taught hobbyist machinists
+- Students
+- Experienced machinists who want a sanity-check tool
+
+Secondary goal:
+- Be a portfolio-quality platform/DevOps artifact (schemas, policy engine, CI tests, infra, monitoring, security scanning)
+
+---
+
+## Repository Structure (Monorepo)
+Create this monorepo structure:
+```
+{{PROJECT_NAME}}/
+├── .github/workflows/
+├── .cursor/
+├── .vscode/
+├── frontend/
+├── backend/
+│   ├── api/
+│   ├── engine/
+│   │   ├── schemas/
+│   │   ├── policies/
+│   │   ├── arbitration/
+│   │   ├── constraints/
+│   │   ├── signals/
+│   │   ├── math/
+│   │   └── explainability/
+│   ├── db/
+│   ├── tests/
+│   └── main.py
+├── infra/
+├── scripts/
+├── docs/
+├── monitoring/
+├── config/
+├── tests/               # optional cross-stack tests
+├── README.md
+├── Makefile
+├── docker-compose.yml
+├── package.json         # root workspace runner
+└── .gitignore
+```
+
+---
+
+## .vscode/ Configuration (Critical for Speed)
+Create .vscode/ directory with:
+- settings.json: format on save, eslint + prettier, python formatting (black/ruff), typescript strict
+- extensions.json: required extensions (ES7+ React, Python, AWS Toolkit, Docker, YAML)
+- launch.json: debug frontend and backend
+- tasks.json: build/test/lint/dev tasks
+- devcontainer.json: optional one-click dev env
+
+---
+
+## Makefile (Old School Dev Ergonomics)
+Create a Makefile with these essential commands:
+
+Setup & Development:
+- make setup            # install deps, bootstrap env, pre-commit hooks
+- make dev              # run full stack locally
+- make build            # build frontend/backend containers
+- make test             # run unit + integration tests
+- make lint             # lint everything
+- make format           # format everything
+- make type-check       # mypy + TS checks
+- make security-scan    # trivy scan + python deps audit
+- make clean            # cleanup artifacts
+
+Database & Services:
+- make db-up
+- make db-seed          # seed materials/tools/policies examples
+- make docker-up
+- make docker-down
+- make status           # show running services and health endpoints
+
+Deployment:
+- make infra-up         # deploy CloudFormation stacks
+- make deploy-dev
+- make deploy-staging
+- make deploy-prod
+
+Cross-platform smart containerization:
+- Linux: docker + compose
+- macOS: Docker Desktop (Apple container optional)
+- Windows: WSL2 + Docker Desktop
+
+---
+
+## Root-Level Files
+
+### Root package.json
+Create root package.json scripts:
+- dev (runs frontend+backend)
+- build
+- test
+- lint
+- format
+- docker:up / docker:down
+- clean
+
+### docker-compose.yml (Local Dev)
+Services:
+- frontend: Next.js dev server on 3000
+- backend: FastAPI on 8000
+- db: PostgreSQL on 5432
+- reverse proxy (optional): nginx
+- monitoring (optional in dev): prometheus + grafana
+
+Include health checks for backend and db.
+
+### .gitignore
+Comprehensive ignore list for node/python/docker/cloudformation artifacts.
+
+---
+
+## Backend Requirements (FastAPI)
+
+### Backend Core Principles
+- Deterministic computation (no AI/ML in MVP)
+- Clear schema contracts (Pydantic v2)
+- Separation of concerns:
+  - engine/ contains pure domain logic (no I/O)
+  - api/ contains routing, auth, request validation
+  - db/ contains persistence mappings
+- Unit-consistent: store and compute in **mm** internally; UI supports inch/mm conversions
+
+### Core Schemas (Pydantic) — MUST IMPLEMENT
+In backend/engine/schemas/: Tool, Material, Machine, Workholding, Coolant, Operation, Policy, Signals, Recommendation.
+
+### Domain Engine (backend/engine/) — MUST IMPLEMENT
+Pipeline:
+1) Normalize inputs
+2) Compute baseline feasible ranges (material + tool + machine)
+3) Compute derived signals (risk scores)
+4) Apply policies (safety first, then optimization)
+5) Detect conflicts
+6) Arbitrate deterministically via weighted strategy
+7) Emit recommendation + explanation trace
+
+### Fusion Tool Import/Export (MVP)
+- Import Fusion 360 tool JSON
+- Validate geometry relationships (blocking and warning rules)
+- Export Fusion-compatible JSON with presets for variants
+
+---
+
+## API (FastAPI) — MUST IMPLEMENT
+Endpoints:
+- GET /healthz
+- GET /version
+- POST /recommend
+- GET /policies
+- POST /policies/test
+- POST /tools/import/fusion
+- GET /tools/{id}
+- GET /tools/{id}/export/fusion?variant=balanced|tool_life|time
+- GET /materials
+- GET /materials/{id}
+
+---
+
+## Database (PostgreSQL)
+Tables:
+- tools (jsonb payload)
+- materials (jsonb payload)
+- policies (jsonb payload)
+- recommendations (jsonb payload, optional)
+
+Seed at least:
+- 6061-T6 material
+- example Helical endmill
+- flood coolant
+- three policies (tool_life, time, safety)
+- one example scenario
+
+---
+
+## Frontend Requirements (Next.js)
+
+### Core UX Flows (MVP)
+1) Import Fusion tool JSON (drag & drop)
+2) Build scenario (tool/material/operation/DOC/WOC/machine/coolant/workholding)
+3) Select intent weights (tool_life vs time; safety always on)
+4) Generate recommendation
+5) Inspect explanations & arbitration trace
+6) Export Fusion presets
+
+### UI Principles
+- Show why, not just what
+- Expand math only when important
+- Present dominant constraint and confidence
+
+---
+
+## Infrastructure (infra/) — CloudFormation
+Create nested stacks:
+- VPC/networking
+- RDS PostgreSQL + Secrets Manager
+- ECS backend + ALB + autoscaling
+- S3 + CloudFront frontend
+- CloudWatch dashboards/alarms
+
+---
+
+## GitHub Actions (.github/workflows/) — MUST IMPLEMENT
+- ci.yml: lint, tests, policy tests, docker build
+- security-scan.yml: Trivy + dependency audits
+- deploy.yml: OIDC -> CloudFormation deploy + ECS update + S3 deploy + CloudFront invalidate
+
+---
+
+## Monitoring & Observability (monitoring/)
+- Structured JSON logs
+- /metrics in dev
+- CloudWatch logs in prod
+- Health checks
+
+---
+
+## Testing Strategy (MANDATORY)
+Backend:
+- unit math tests
+- policy arbitration tests
+- Fusion import mapping tests
+- golden snapshot tests for recommendation JSON
+
+Frontend:
+- Playwright E2E for import -> recommend -> export
+
+---
+
+## Documentation (docs/) — MUST IMPLEMENT
+- ARCHITECTURE.md
+- POLICY_ENGINE.md
+- FUSION_ADAPTER.md
+- RUNBOOK.md
+- README.md quickstart
+
+---
+
+## Deliverable Expectations
+- Runs locally end-to-end with docker-compose
+- Seeded scenario works immediately
+- CI works and fails on regressions
+- AWS deploy flows are coherent
+
+END OF PROMPT

@@ -1,0 +1,71 @@
+[tool.poetry]
+name = "cnc-calc-backend"
+version = "1.0.0"
+description = "CNC Calculator API - Backend service for managing CNC tool profiles"
+authors = ["CNC Calculator Team"]
+readme = "README.md"
+packages = [{include = "app", from = "."}, {include = "models", from = "."}, {include = "schemas", from = "."}, {include = "services", from = "."}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "0.104.1"
+uvicorn = {extras = ["standard"], version = "0.24.0"}
+python-multipart = "0.0.6"
+sqlalchemy = "2.0.23"
+alembic = "1.13.1"
+psycopg2-binary = "2.9.9"
+asyncpg = "0.29.0"
+python-jose = {extras = ["cryptography"], version = "3.3.0"}
+passlib = {extras = ["bcrypt"], version = "1.7.4"}
+pydantic = "2.5.0"
+pydantic-settings = "2.1.0"
+httpx = "0.25.2"
+structlog = "23.2.0"
+prometheus-client = "0.19.0"
+openpyxl = "3.1.2"
+python-dateutil = "2.8.2"
+pytz = "2023.3"
+python-dotenv = "1.0.0"
+redis = "5.0.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "7.4.3"
+pytest-asyncio = "0.21.1"
+pytest-cov = "4.1.0"
+black = "23.11.0"
+isort = "5.12.0"
+flake8 = "6.1.0"
+mypy = "1.7.1"
+aiosqlite = "^0.19.0"
+httpx = "^0.25.2"
+
+[tool.poetry.scripts]
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 100
+target-version = ['py311']
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+addopts = "--cov=app --cov=services --cov=models --cov=schemas --cov-report=term-missing --cov-report=xml"
+

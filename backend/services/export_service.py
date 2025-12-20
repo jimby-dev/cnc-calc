@@ -1,3 +1,6 @@
+"""
+Export service for generating tool exports in various formats
+"""
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from typing import Dict, Any, Optional
@@ -9,6 +12,7 @@ from datetime import datetime
 
 from models.tool import Tool, ToolExport
 from schemas.tool import ToolResponse, ExportRequest, ExportResponse, ExportFormat, ExportUnits
+from app.core.constants import MM_TO_INCHES
 import structlog
 
 logger = structlog.get_logger()
@@ -189,14 +193,14 @@ class ExportService:
         """Convert metric measurements to imperial"""
         converted = geometry.copy()
         
-        # Convert mm to inches (1 inch = 25.4 mm)
+        # Convert mm to inches using constant
         mm_fields = ["diameter", "flute_length", "overall_length", "length_of_cut", 
                      "corner_radius", "tip_radius", "tip_flat", "shank_diameter", 
                      "pitch", "max_thread_length"]
         
         for field in mm_fields:
             if field in converted and converted[field] is not None:
-                converted[field] = round(converted[field] / 25.4, 4)
+                converted[field] = round(converted[field] / MM_TO_INCHES, 4)
         
         return converted
     

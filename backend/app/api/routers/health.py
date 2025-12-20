@@ -1,11 +1,14 @@
+"""
+Health check endpoints for monitoring and load balancers
+"""
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.database import get_db
 from app.core.config import settings
+from app.core.redis_client import get_redis_client
 from schemas.tool import HealthResponse
 from datetime import datetime
-import redis.asyncio as redis
 import structlog
 
 logger = structlog.get_logger()
@@ -21,11 +24,10 @@ async def check_database(db: AsyncSession) -> str:
         return "unhealthy"
 
 async def check_redis() -> str:
-    """Check Redis connectivity"""
+    """Check Redis connectivity using connection pool"""
     try:
-        redis_client = redis.from_url(settings.REDIS_URL)
+        redis_client = await get_redis_client()
         await redis_client.ping()
-        await redis_client.close()
         return "healthy"
     except Exception as e:
         logger.error("Redis health check failed", error=str(e))

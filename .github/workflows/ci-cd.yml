@@ -78,41 +78,52 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Python
+        id: setup-python
         uses: actions/setup-python@v4
         with:
           python-version: ${{ env.PYTHON_VERSION }}
 
-      - name: Cache pip dependencies
+      - name: Install Poetry
+        uses: snok/install-poetry@v1
+        with:
+          version: latest
+          virtualenvs-create: true
+          virtualenvs-in-project: true
+
+      - name: Load cached venv
+        id: cached-poetry-dependencies
         uses: actions/cache@v3
         with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('backend/requirements.txt') }}
+          path: backend/.venv
+          key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('backend/poetry.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pip-
+            venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-
 
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        working-directory: ./backend
+        run: poetry install --no-interaction --no-ansi
 
       - name: Run linting
+        working-directory: ./backend
         continue-on-error: true
         run: |
-          flake8 . --exclude=.venv,venv,__pycache__,*.pyc || echo "Flake8 found issues (non-blocking)"
-          black --check . --exclude='\.venv|venv' || echo "Black found formatting issues (non-blocking)"
-          isort --check-only . --skip-glob='.venv/*' --skip-glob='venv/*' || echo "isort found import ordering issues (non-blocking)"
+          poetry run flake8 . --exclude=.venv,venv,__pycache__,*.pyc || echo "Flake8 found issues (non-blocking)"
+          poetry run black --check . --exclude='\.venv|venv' || echo "Black found formatting issues (non-blocking)"
+          poetry run isort --check-only . --skip-glob='.venv/*' --skip-glob='venv/*' || echo "isort found import ordering issues (non-blocking)"
 
       - name: Run type checking
+        working-directory: ./backend
         continue-on-error: true
-        run: mypy . || echo "Type checking found issues (non-blocking)"
+        run: poetry run mypy . || echo "Type checking found issues (non-blocking)"
 
       - name: Run tests
+        working-directory: ./backend
         continue-on-error: true
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cnc_calc_test
           REDIS_URL: redis://localhost:6379
           ENVIRONMENT: test
-        run: pytest -v --cov=. --cov-report=xml || echo "Tests failed or no tests found (non-blocking)"
+        run: poetry run pytest -v --cov=app --cov=services --cov=models --cov=schemas --cov-report=xml || echo "Tests failed or no tests found (non-blocking)"
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
@@ -230,6 +241,9 @@ jobs:
       - name: Deploy ECS services
         run: |
           cd infra
+          # Note: Set AllowedIPs parameter to restrict access to specific IPs
+          # Example: AllowedIPs=1.2.3.4/32
+          # For multiple IPs, manually update security groups after deployment
           aws cloudformation deploy \
             --template-file services.yml \
             --stack-name cnc-calc-services-prod \
@@ -240,6 +254,7 @@ jobs:
               MainStackName=cnc-calc-main-prod \
               BackendTaskDefinitionArn=${{ steps.get-task-defs.outputs.backend_td }} \
               FrontendTaskDefinitionArn=${{ steps.get-task-defs.outputs.frontend_td }} \
+              AllowedIPs=${{ secrets.ALLOWED_IPS || '' }} \
             --region us-east-2
 
       - name: Login to Amazon ECR

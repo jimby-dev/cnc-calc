@@ -1,8 +1,12 @@
+"""
+Application configuration settings
+"""
+import os
 from pydantic_settings import BaseSettings
 from typing import List, Optional
-import os
 
 class Settings(BaseSettings):
+    """Application settings loaded from environment variables"""
     # Application
     APP_NAME: str = "CNC Calculator API"
     VERSION: str = "1.0.0"
@@ -10,7 +14,8 @@ class Settings(BaseSettings):
     DEBUG: bool = True
     
     # Database
-    DATABASE_URL: str = "postgresql://cnc_user:cnc_password@localhost:5432/cnc_calc"
+    # No default URL - must be set via environment variable
+    DATABASE_URL: str = ""
     DATABASE_POOL_SIZE: int = 10
     DATABASE_MAX_OVERFLOW: int = 20
     
@@ -19,9 +24,13 @@ class Settings(BaseSettings):
     REDIS_PASSWORD: Optional[str] = None
     
     # Security
-    SECRET_KEY: str = "your-secret-key-change-in-production"
+    # No default secret - must be set via environment variable
+    SECRET_KEY: str = ""
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     ALGORITHM: str = "HS256"
+    
+    # API Key Authentication (required for all endpoints)
+    API_KEY: Optional[str] = None
     
     # CORS
     ALLOWED_ORIGINS: List[str] = [
@@ -45,24 +54,44 @@ class Settings(BaseSettings):
     LOG_FORMAT: str = "json"
     
     # Rate limiting
-    RATE_LIMIT_PER_MINUTE: int = 100
+    RATE_LIMIT_PER_MINUTE: int = 60
     
     class Config:
         env_file = ".env"
         case_sensitive = True
+    
+    def model_post_init(self, __context) -> None:
+        """Validate settings after initialization"""
+        self._validate_production_settings()
+    
+    def _validate_production_settings(self) -> None:
+        """Validate that required settings are set in production"""
+        if self.ENVIRONMENT == "production":
+            # Validate DATABASE_URL
+            if not self.DATABASE_URL:
+                raise ValueError("DATABASE_URL must be set in production environment")
+            if "cnc_password" in self.DATABASE_URL or "localhost" in self.DATABASE_URL:
+                raise ValueError("DATABASE_URL must point to production database, not development")
+            
+            # Validate SECRET_KEY
+            if not self.SECRET_KEY:
+                raise ValueError("SECRET_KEY must be set in production environment")
+            if self.SECRET_KEY == "your-secret-key-change-in-production":
+                raise ValueError("SECRET_KEY must be changed from default value in production")
+            
+            # Validate API_KEY
+            if not self.API_KEY:
+                raise ValueError("API_KEY must be set in production environment")
 
 # Create settings instance
-settings = Settings()
+# Pydantic-settings automatically loads from environment variables
+# For development, provide defaults if not set
+# Development defaults (only used if env vars not set)
+_dev_defaults = {}
+if os.getenv("ENVIRONMENT", "development") == "development":
+    _dev_defaults = {
+        "DATABASE_URL": os.getenv("DATABASE_URL", "postgresql://cnc_user:cnc_password@localhost:5432/cnc_calc"),
+        "SECRET_KEY": os.getenv("SECRET_KEY", "dev-secret-key-change-in-production"),
+    }
 
-# Override with environment variables if present
-if os.getenv("ENVIRONMENT"):
-    settings.ENVIRONMENT = os.getenv("ENVIRONMENT")
-    
-if os.getenv("DATABASE_URL"):
-    settings.DATABASE_URL = os.getenv("DATABASE_URL")
-    
-if os.getenv("REDIS_URL"):
-    settings.REDIS_URL = os.getenv("REDIS_URL")
-    
-if os.getenv("SECRET_KEY"):
-    settings.SECRET_KEY = os.getenv("SECRET_KEY")
+settings = Settings(**_dev_defaults)

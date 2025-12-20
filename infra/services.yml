@@ -33,6 +33,11 @@ Parameters:
     Description: Frontend Task Definition ARN (from task-definitions stack)
     Default: ''
 
+  AllowedIPs:
+    Type: CommaDelimitedList
+    Description: List of allowed IP addresses/CIDR blocks (e.g., 1.2.3.4/32). For multiple IPs, manually update security group after deployment. Leave empty to allow all (NOT RECOMMENDED).
+    Default: ''
+
 Resources:
   # Security Group for Backend Service
   BackendSecurityGroup:
@@ -46,8 +51,14 @@ Resources:
         - IpProtocol: tcp
           FromPort: 8000
           ToPort: 8000
-          CidrIp: 0.0.0.0/0
-          Description: Allow HTTP traffic to backend
+          CidrIp: !If
+            - HasAllowedIPs
+            - !Select [0, !Ref AllowedIPs]
+            - 0.0.0.0/0
+          Description: !If
+            - HasAllowedIPs
+            - Allow HTTP traffic from whitelisted IP
+            - WARNING - Allowing all IPs (0.0.0.0/0). Set AllowedIPs parameter to restrict access.
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
@@ -57,6 +68,9 @@ Resources:
           Value: !Sub 'cnc-calc-${Environment}-backend-sg'
         - Key: Environment
           Value: !Ref Environment
+
+Conditions:
+  HasAllowedIPs: !Not [!Equals [!Join ['', !Ref AllowedIPs], '']]
 
   # Security Group for Frontend Service
   FrontendSecurityGroup:

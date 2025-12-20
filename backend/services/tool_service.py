@@ -1,7 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, or_
-from sqlalchemy.orm import selectinload
-from typing import List, Optional
+from typing import Optional
 import uuid
 from datetime import datetime
 
@@ -144,19 +143,5 @@ class ToolService:
         await self.db.commit()
         return True
     
-    async def get_tool_by_name_and_vendor(self, name: str, vendor: str) -> Optional[ToolResponse]:
-        """Get a tool by name and vendor (for duplicate checking)"""
-        result = await self.db.execute(
-            select(Tool).where(
-                and_(
-                    Tool.name == name,
-                    Tool.vendor == vendor,
-                    Tool.is_deleted == False
-                )
-            )
-        )
-        tool = result.scalar_one_or_none()
-        
-        if tool:
-            return ToolResponse.from_orm(tool)
-        return None
+    # Note: get_tool_by_name_and_vendor removed - not currently used
+    # If duplicate checking is needed in the future, re-implement with proper validation

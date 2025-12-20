@@ -29,7 +29,11 @@ install-deps: ## Install all dependencies
 	@echo "📦 Installing dependencies..."
 	npm install
 	cd frontend && npm install
-	cd backend && python3.11 -m venv .venv && .venv/bin/pip install -r requirements.txt
+	@if ! command -v poetry >/dev/null 2>&1; then \
+		echo "📦 Installing Poetry..."; \
+		curl -sSL https://install.python-poetry.org | python3 -; \
+	fi
+	cd backend && poetry install
 	@echo "✅ Dependencies installed"
 
 configure-env: ## Configure environment files
@@ -84,7 +88,16 @@ db-up: ## Start local database
 
 db-seed: ## Seed database with sample data
 	@echo "🌱 Seeding database..."
-	cd backend && python scripts/seed_database.py
+	cd backend && poetry run python scripts/seed_data.py
+
+db-migrate: ## Run database migrations
+	@echo "🔄 Running database migrations..."
+	cd backend && poetry run alembic upgrade head
+
+db-migrate-create: ## Create a new database migration
+	@echo "📝 Creating new migration..."
+	@read -p "Enter migration message: " msg; \
+	cd backend && poetry run alembic revision --autogenerate -m "$$msg"
 
 docker-up: ## Start all services (auto-detects: Docker on Linux, Apple Container on macOS)
 	@echo "🐳 Starting all services..."
@@ -136,7 +149,7 @@ format: ## Format all code
 type-check: ## Type checking
 	@echo "🔍 Type checking..."
 	cd frontend && npm run type-check
-	cd backend && .venv/bin/python -m mypy .
+	cd backend && poetry run mypy .
 
 security-scan: ## Security vulnerability scan
 	@echo "🔒 Running security scan..."

@@ -1,25 +1,29 @@
+"""
+Tool management API endpoints
+"""
 from fastapi import APIRouter, Depends, HTTPException, Query, Path
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, and_
-from typing import List, Optional
-import uuid
-from datetime import datetime
+from typing import Optional
+import structlog
 
 from app.core.database import get_db
-from models.tool import Tool, ToolExport
+from app.core.auth import verify_api_key
+from app.core.exceptions import ToolNotFoundError, ExportNotFoundError
 from schemas.tool import (
     ToolCreate, ToolUpdate, ToolResponse, ToolListResponse,
-    ExportRequest, ExportResponse, ValidationResponse, ValidationError
+    ExportRequest, ExportResponse, ValidationResponse
 )
 from services.tool_service import ToolService
 from services.export_service import ExportService
 from services.validation_service import ValidationService
-import structlog
 
 logger = structlog.get_logger()
 router = APIRouter()
 
-@router.get("/", response_model=ToolListResponse)
+# Apply API key authentication to all tool endpoints
+# Health endpoints are excluded (handled in health router)
+
+@router.get("/", response_model=ToolListResponse, dependencies=[Depends(verify_api_key)])
 async def list_tools(
     page: int = Query(1, ge=1, description="Page number"),
     size: int = Query(20, ge=1, le=100, description="Page size"),
@@ -42,11 +46,15 @@ async def list_tools(
         logger.info("Tools listed", count=len(result.tools), page=page, size=size)
         return result
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Failed to list tools", error=str(e))
+        # Sanitize error logging - don't log full exception details
+        error_type = type(e).__name__
+        logger.error("Failed to list tools", error_type=error_type, exc_info=False)
         raise HTTPException(status_code=500, detail="Failed to list tools")
 
-@router.post("/", response_model=ToolResponse)
+@router.post("/", response_model=ToolResponse, dependencies=[Depends(verify_api_key)])
 async def create_tool(
     tool_data: ToolCreate,
     db: AsyncSession = Depends(get_db)
@@ -59,11 +67,15 @@ async def create_tool(
         logger.info("Tool created", tool_id=tool.id, name=tool.name)
         return tool
         
+    except HTTPException:
+        raise
     except Exception as e:
-        logger.error("Failed to create tool", error=str(e))
+        # Sanitize error logging
+        error_type = type(e).__name__
+        logger.error("Failed to create tool", error_type=error_type, exc_info=False)
         raise HTTPException(status_code=400, detail="Failed to create tool")
 
-@router.get("/{tool_id}", response_model=ToolResponse)
+@router.get("/{tool_id}", response_model=ToolResponse, dependencies=[Depends(verify_api_key)])
 async def get_tool(
     tool_id: str = Path(..., description="Tool ID"),
     db: AsyncSession = Depends(get_db)
@@ -74,7 +86,7 @@ async def get_tool(
         tool = await tool_service.get_tool(tool_id)
         
         if not tool:
-            raise HTTPException(status_code=404, detail="Tool not found")
+            raise ToolNotFoundError(tool_id)
             
         logger.info("Tool retrieved", tool_id=tool_id)
         return tool
@@ -82,10 +94,12 @@ async def get_tool(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to get tool", tool_id=tool_id, error=str(e))
+        # Sanitize error logging
+        error_type = type(e).__name__
+        logger.error("Failed to get tool", tool_id=tool_id, error_type=error_type, exc_info=False)
         raise HTTPException(status_code=500, detail="Failed to get tool")
 
-@router.put("/{tool_id}", response_model=ToolResponse)
+@router.put("/{tool_id}", response_model=ToolResponse, dependencies=[Depends(verify_api_key)])
 async def update_tool(
     tool_id: str = Path(..., description="Tool ID"),
     tool_data: ToolUpdate = ...,
@@ -97,7 +111,7 @@ async def update_tool(
         tool = await tool_service.update_tool(tool_id, tool_data)
         
         if not tool:
-            raise HTTPException(status_code=404, detail="Tool not found")
+            raise ToolNotFoundError(tool_id)
             
         logger.info("Tool updated", tool_id=tool_id)
         return tool
@@ -105,10 +119,12 @@ async def update_tool(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to update tool", tool_id=tool_id, error=str(e))
+        # Sanitize error logging
+        error_type = type(e).__name__
+        logger.error("Failed to update tool", tool_id=tool_id, error_type=error_type, exc_info=False)
         raise HTTPException(status_code=500, detail="Failed to update tool")
 
-@router.delete("/{tool_id}")
+@router.delete("/{tool_id}", dependencies=[Depends(verify_api_key)])
 async def delete_tool(
     tool_id: str = Path(..., description="Tool ID"),
     db: AsyncSession = Depends(get_db)
@@ -127,10 +143,12 @@ async def delete_tool(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to delete tool", tool_id=tool_id, error=str(e))
+        # Sanitize error logging
+        error_type = type(e).__name__
+        logger.error("Failed to delete tool", tool_id=tool_id, error_type=error_type, exc_info=False)
         raise HTTPException(status_code=500, detail="Failed to delete tool")
 
-@router.post("/{tool_id}/validate", response_model=ValidationResponse)
+@router.post("/{tool_id}/validate", response_model=ValidationResponse, dependencies=[Depends(verify_api_key)])
 async def validate_tool(
     tool_id: str = Path(..., description="Tool ID"),
     db: AsyncSession = Depends(get_db)
@@ -141,7 +159,7 @@ async def validate_tool(
         tool = await tool_service.get_tool(tool_id)
         
         if not tool:
-            raise HTTPException(status_code=404, detail="Tool not found")
+            raise ToolNotFoundError(tool_id)
             
         validation_service = ValidationService()
         result = await validation_service.validate_tool(tool)
@@ -152,10 +170,12 @@ async def validate_tool(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to validate tool", tool_id=tool_id, error=str(e))
+        # Sanitize error logging
+        error_type = type(e).__name__
+        logger.error("Failed to validate tool", tool_id=tool_id, error_type=error_type, exc_info=False)
         raise HTTPException(status_code=500, detail="Failed to validate tool")
 
-@router.post("/{tool_id}/export", response_model=ExportResponse)
+@router.post("/{tool_id}/export", response_model=ExportResponse, dependencies=[Depends(verify_api_key)])
 async def export_tool(
     tool_id: str = Path(..., description="Tool ID"),
     export_request: ExportRequest = ...,
@@ -167,7 +187,7 @@ async def export_tool(
         tool = await tool_service.get_tool(tool_id)
         
         if not tool:
-            raise HTTPException(status_code=404, detail="Tool not found")
+            raise ToolNotFoundError(tool_id)
             
         export_service = ExportService(db)
         export_result = await export_service.export_tool(tool, export_request)
@@ -178,10 +198,12 @@ async def export_tool(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to export tool", tool_id=tool_id, error=str(e))
+        # Sanitize error logging
+        error_type = type(e).__name__
+        logger.error("Failed to export tool", tool_id=tool_id, error_type=error_type, exc_info=False)
         raise HTTPException(status_code=500, detail="Failed to export tool")
 
-@router.get("/{tool_id}/export/{export_id}/download")
+@router.get("/{tool_id}/export/{export_id}/download", dependencies=[Depends(verify_api_key)])
 async def download_export(
     tool_id: str = Path(..., description="Tool ID"),
     export_id: str = Path(..., description="Export ID"),
@@ -193,7 +215,7 @@ async def download_export(
         export_data = await export_service.get_export(export_id)
         
         if not export_data:
-            raise HTTPException(status_code=404, detail="Export not found")
+            raise ExportNotFoundError(export_id)
             
         logger.info("Export downloaded", export_id=export_id)
         return export_data
@@ -201,5 +223,7 @@ async def download_export(
     except HTTPException:
         raise
     except Exception as e:
-        logger.error("Failed to download export", export_id=export_id, error=str(e))
+        # Sanitize error logging
+        error_type = type(e).__name__
+        logger.error("Failed to download export", export_id=export_id, error_type=error_type, exc_info=False)
         raise HTTPException(status_code=500, detail="Failed to download export")

@@ -1,6 +1,6 @@
-# CNC Calculator
+# Machining Decision Engine
 
-An online tool management system designed specifically for CNC machinists to create, manage, and export tool profiles compatible with Fusion 360.
+A policy-driven machining decision engine that generates explainable feeds & speeds recommendations for CNC machining. Built to be portfolio-grade for DevOps/platform engineering.
 
 ## 🚀 Quick Start
 
@@ -36,23 +36,22 @@ An online tool management system designed specifically for CNC machinists to cre
 
 ## 📋 Features
 
-### Tool Management
-- **6 Tool Types**: End Mill, Ball End Mill, Chamfer, Drill, Reamer, Thread Mill
-- **Dynamic Forms**: Tool-specific geometry forms with real-time validation
-- **Visual Preview**: 2D SVG tool cross-section visualization
-- **Search & Filter**: Find tools by name, vendor, or type
+### Decision Engine
+- **Policy-Driven Recommendations**: Generate feeds & speeds based on optimization goals (tool life, time, safety)
+- **Explainable Results**: Complete decision trace showing why each parameter was chosen
+- **Multiple Policies**: Apply and arbitrate between multiple policies simultaneously
+- **Risk Assessment**: Automatic risk scoring for tool wear, chatter, surface finish, and more
 
-### Export Capabilities
-- **Fusion 360 Integration**: Direct .tools JSON export
-- **CSV Export**: Compatible with Excel and other CAM software
-- **Unit Conversion**: Metric (mm) and Imperial (inches) support
-- **Validation**: Pre-export validation for Fusion 360 compatibility
+### Scenario Builder
+- **5-Step Workflow**: Tool → Material → Machine → Operation → Policies
+- **Fusion 360 Import**: Import tool profiles from Fusion 360 JSON
+- **Policy Weighting**: Adjust optimization priorities with interactive sliders
+- **Real-time Validation**: Instant feedback on parameter feasibility
 
-### User Experience
-- **4-Step Wizard**: Guided tool creation process
-- **Real-time Validation**: Instant feedback on geometry relationships
-- **Responsive Design**: Works on desktop, tablet, and mobile
-- **Accessibility**: WCAG compliant with keyboard navigation
+### Export & Integration
+- **Fusion 360 Presets**: Export recommendations as Fusion-compatible presets
+- **Tool Library**: Manage tool profiles for reuse across scenarios
+- **Unit Conversion**: All calculations in metric (mm), UI supports inch/mm toggle
 
 ## 🏗️ Architecture
 
@@ -65,10 +64,11 @@ An online tool management system designed specifically for CNC machinists to cre
 
 ### Backend (FastAPI)
 - **Framework**: FastAPI with async/await support
-- **Database**: PostgreSQL with SQLAlchemy ORM
-- **Caching**: Redis for session management
-- **Validation**: Pydantic models with comprehensive validation
-- **Export**: JSON and CSV generation with unit conversion
+- **Decision Engine**: Policy-driven recommendation system with explainability
+- **Database**: PostgreSQL with SQLAlchemy ORM (JSONB for flexible schemas)
+- **Caching**: Redis for rate limiting and session management
+- **Validation**: Pydantic v2 models with comprehensive validation
+- **Security**: API key authentication, rate limiting, IP whitelisting
 
 ### Infrastructure
 - **Development**: Docker Compose for local services
@@ -112,17 +112,24 @@ cnc-calc/
 ├── frontend/           # Next.js application
 │   ├── src/
 │   │   ├── app/       # App Router pages
-│   │   ├── components/ # React components
-│   │   ├── types/     # TypeScript definitions
-│   │   └── utils/     # Utility functions
+│   │   ├── components/ # React components (ScenarioBuilder, RecommendationDisplay)
+│   │   ├── types/     # TypeScript definitions (engine.ts, tool.ts)
+│   │   └── lib/       # API client with authentication
 ├── backend/           # FastAPI application
+│   ├── engine/        # Decision engine (NEW)
+│   │   ├── schemas/   # Domain models (Material, Machine, Policy, etc.)
+│   │   ├── policies/  # Policy implementations
+│   │   ├── arbitration/ # Conflict resolution
+│   │   ├── constraints/ # Feasible range calculations
+│   │   ├── signals/   # Risk assessment
+│   │   ├── math/      # Feeds & speeds calculations
+│   │   └── explainability/ # Decision trace generation
 │   ├── app/
-│   │   ├── api/      # API routes
-│   │   ├── core/     # Core configuration
-│   │   └── db/       # Database setup
-│   ├── models/       # SQLAlchemy models
-│   ├── schemas/      # Pydantic schemas
-│   └── services/     # Business logic
+│   │   ├── api/routers/ # API routes (recommend, materials, policies, machines)
+│   │   └── core/      # Configuration, auth, rate limiting
+│   ├── models/        # SQLAlchemy models (tools, materials, machines, policies)
+│   ├── schemas/       # Pydantic schemas (legacy tool schemas)
+│   └── services/      # Business logic
 ├── infra/            # AWS CloudFormation templates
 ├── .github/workflows/ # CI/CD pipelines
 ├── monitoring/       # Grafana dashboards
@@ -151,12 +158,33 @@ ENVIRONMENT=development
 The application uses PostgreSQL with the following tables:
 - `tools`: Tool metadata and geometry
 - `tool_exports`: Export history and data
+- `materials`: Material definitions with properties (JSONB)
+- `machines`: Machine definitions with capabilities (JSONB)
+- `policies`: Policy definitions with weights and rules (JSONB)
+- `recommendations`: Optional storage for recommendation history (JSONB)
+
+**Run migrations and seed data:**
+```bash
+cd backend
+poetry run alembic upgrade head
+python scripts/seed_data.py
+```
 
 ## 📊 API Documentation
 
-### Endpoints
+### Primary Endpoints (Decision Engine)
 
-- `GET /api/health` - Health check
+- `POST /api/recommend` - Generate feeds & speeds recommendation (requires API key)
+- `GET /api/materials` - List available materials
+- `GET /api/materials/{id}` - Get specific material
+- `GET /api/machines` - List available machines
+- `GET /api/machines/{id}` - Get specific machine
+- `GET /api/policies` - List available policies
+- `POST /api/policies/test` - Test policy combinations
+
+### Tool Management Endpoints
+
+- `GET /api/healthz` - Health check (no auth required)
 - `GET /api/tools` - List tools with pagination
 - `POST /api/tools` - Create new tool
 - `GET /api/tools/{id}` - Get specific tool
@@ -166,25 +194,27 @@ The application uses PostgreSQL with the following tables:
 - `POST /api/tools/{id}/export` - Export tool
 - `GET /api/tools/{id}/export/{export_id}/download` - Download export
 
-### Tool Types
+**Note**: All endpoints except health checks require `X-API-Key` header. See `SECURITY_SETUP.md` for configuration.
 
-1. **End Mill**: Square end cutting tool
-   - Diameter, flute count, helix angle, flute length, length of cut, overall length, corner radius
+### Optimization Policies
 
-2. **Ball End Mill**: Spherical end for 3D contouring
-   - Diameter, flute count, tip radius, flute length, overall length
+1. **Safety Policy**: Conservative parameters prioritizing tool and machine safety
+   - Uses lower end of feasible ranges (70% RPM, 60% feedrate)
+   - Maximum confidence, minimal risk
 
-3. **Chamfer Mill**: Angled cutting tool
-   - Included angle, tip flat, flute length, overall length, shank diameter
+2. **Tool Life Policy**: Maximize tool life with lower SFM and feedrates
+   - Uses 40% of RPM range, 50% of feedrate range
+   - Extends tool longevity
 
-4. **Drill**: Pointed tool for holes
-   - Diameter, point angle, flute length, overall length
+3. **Time Policy**: Maximize material removal rate (MRR) to minimize cycle time
+   - Uses 80% of RPM range, 85% of feedrate range
+   - Optimizes for speed
 
-5. **Reamer**: Precision finishing tool
-   - Diameter, flute length, overall length, optional lead angle
+4. **Balanced Policy**: Balance tool life, time, and safety
+   - Uses middle of feasible ranges
+   - Good default for most scenarios
 
-6. **Thread Mill**: Thread creation tool
-   - Diameter, pitch, maximum thread length, flute length, overall length
+**Note**: Safety is always applied as a base constraint. Multiple policies can be combined with weighted arbitration.
 
 ## 🚀 Deployment
 
@@ -249,8 +279,16 @@ MIT License - see LICENSE file for details
 
 ## 🔄 Changelog
 
-### v1.0.0
-- Initial release
+### v2.0.0 (Current)
+- **Major Pivot**: From tool management SaaS to policy-driven decision engine
+- Decision engine with explainability
+- Policy system (Safety, Tool Life, Time, Balanced)
+- Scenario builder UI
+- Materials, machines, and policies management
+- Risk assessment and constraint detection
+- See `ADAPTATION_SUMMARY.md` for full details
+
+### v1.0.0 (Legacy)
 - Tool management system
 - Fusion 360 export
 - Real-time validation

@@ -1,3 +1,13 @@
+# NOTE: This project now uses Poetry for dependency management.
+# See pyproject.toml for the current dependencies.
+# This file is kept for reference only and may be removed in the future.
+#
+# To install dependencies, use:
+#   poetry install
+#
+# Or if Poetry is not available:
+#   pip install -r requirements.txt
+
 # FastAPI and web server
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
@@ -44,3 +54,6 @@ openpyxl==3.1.2
 # Additional utilities
 python-dateutil==2.8.2
 pytz==2023.3
+
+# Redis (added for rate limiting)
+redis==5.0.1
