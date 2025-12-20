@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { XMarkIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
 import { Scenario, Material, Machine, Policy, Operation, OperationType, PolicyWeights } from '@/types/engine';
-import apiClient from '@/lib/api-client';
+import { apiClient } from '@/lib/api-client';
 
 interface ScenarioBuilderProps {
   onClose: () => void;

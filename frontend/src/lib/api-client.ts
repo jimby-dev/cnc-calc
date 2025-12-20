@@ -3,11 +3,12 @@
  * Includes API key authentication header
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-const API_KEY = process.env.NEXT_PUBLIC_API_KEY || '';
+// Ensure these are strings (process.env values can be undefined)
+const API_BASE_URL = (process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000') as string;
+const API_KEY = (process.env.NEXT_PUBLIC_API_KEY || '') as string;
 
 interface RequestOptions extends RequestInit {
-  headers?: HeadersInit;
+  headers?: Record<string, string>;
 }
 
 class ApiClient {
@@ -25,7 +26,7 @@ class ApiClient {
   ): Promise<T> {
     const url = `${this.baseUrl}${endpoint}`;
     
-    const headers: HeadersInit = {
+    const headers: Record<string, string> = {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
     };
@@ -37,7 +38,7 @@ class ApiClient {
 
     const config: RequestInit = {
       ...options,
-      headers,
+      headers: headers as HeadersInit,
     };
 
     try {
@@ -45,7 +46,7 @@ class ApiClient {
 
       // Handle rate limiting
       if (response.status === 429) {
-        const retryAfter = response.headers.get('Retry-After') || '60';
+        const retryAfter: string = response.headers.get('Retry-After') || '60';
         throw new Error(`Rate limit exceeded. Please try again after ${retryAfter} seconds.`);
       }
 
@@ -55,8 +56,9 @@ class ApiClient {
       }
 
       if (!response.ok) {
-        const error = await response.json().catch(() => ({ detail: response.statusText }));
-        throw new Error(error.detail || `HTTP error! status: ${response.status}`);
+        const error = await response.json().catch(() => ({ detail: response.statusText || 'Unknown error' }));
+        const errorDetail: string = (error as { detail?: string }).detail || `HTTP error! status: ${response.status}`;
+        throw new Error(errorDetail);
       }
 
       // Handle empty responses
@@ -101,4 +103,3 @@ class ApiClient {
 
 // Export singleton instance
 export const apiClient = new ApiClient(API_BASE_URL, API_KEY);
-

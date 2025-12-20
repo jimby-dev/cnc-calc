@@ -59,6 +59,7 @@ npm run dev
 ## What Works Locally ✅
 
 ### Fully Functional
+
 - ✅ **Backend starts** - No import errors (fixed)
 - ✅ **Frontend builds and runs** - Next.js dev server works
 - ✅ **Health check endpoint** - `/api/healthz` (no auth required)
@@ -68,6 +69,7 @@ npm run dev
 - ✅ **Seed data** - Can populate materials, machines, policies
 
 ### Partially Functional
+
 - ⚠️ **Scenario Builder UI** - Renders but shows empty states (no data loading)
 - ⚠️ **Recommendation Display** - Component works but can't generate recommendations yet
 - ⚠️ **API Authentication** - **FIXED**: Now allows development mode without API key
@@ -77,12 +79,14 @@ npm run dev
 ## What Doesn't Work Yet ⚠️
 
 ### Backend API Endpoints
+
 - ❌ `POST /api/recommend` - Returns 501 (service layer not implemented)
 - ❌ `GET /api/materials` - Returns empty array `[]` (no database queries)
 - ❌ `GET /api/machines` - Returns empty array `[]` (no database queries)
 - ❌ `GET /api/policies` - Returns empty array `[]` (no database queries)
 
 ### Frontend Features
+
 - ❌ **Data Loading** - API calls are commented out in `ScenarioBuilder.tsx`
 - ❌ **Tool Selection** - Step 1 is placeholder only
 - ❌ **Recommendation Generation** - Can't generate recommendations yet
@@ -95,6 +99,7 @@ npm run dev
 ### Backend Environment Variables
 
 Create `backend/.env`:
+
 ```env
 # Database (docker-compose provides these automatically)
 DATABASE_URL=postgresql://cnc_user:cnc_password@localhost:5432/cnc_calc
@@ -116,6 +121,7 @@ SECRET_KEY=dev-secret-key-change-in-production
 ### Frontend Environment Variables
 
 Create `frontend/.env.local`:
+
 ```env
 # Backend URL
 NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
@@ -178,21 +184,25 @@ SELECT * FROM policies;
 ## Known Issues & Workarounds
 
 ### Issue 1: Empty API Responses
+
 **Problem**: Materials/machines/policies endpoints return `[]`  
 **Workaround**: None - service layer needs to be implemented  
 **Impact**: Frontend shows empty states
 
 ### Issue 2: Recommendation Endpoint Returns 501
+
 **Problem**: Service layer not implemented  
 **Workaround**: None - needs implementation  
 **Impact**: Can't generate recommendations
 
 ### Issue 3: Frontend API Calls Commented Out
+
 **Problem**: API calls are in TODO comments  
 **Workaround**: Uncomment lines 47-54 in `ScenarioBuilder.tsx` (but will still get empty arrays)  
 **Impact**: Frontend won't attempt to load data
 
 ### Issue 4: Database Not Seeded
+
 **Problem**: Need to run seed script  
 **Workaround**: Run `python backend/scripts/seed_data.py`  
 **Impact**: No materials/machines/policies available
@@ -202,6 +212,7 @@ SELECT * FROM policies;
 ## What You Can Test Right Now
 
 ### ✅ UI/UX Testing
+
 - Scenario builder modal opens and closes
 - Step navigation works
 - Form inputs work
@@ -209,6 +220,7 @@ SELECT * FROM policies;
 - Recommendation display component renders (with mock data)
 
 ### ✅ Backend Testing
+
 - Backend starts without errors
 - Health check works
 - Tool CRUD endpoints work (if you have tools)
@@ -217,6 +229,7 @@ SELECT * FROM policies;
 - Seed script runs
 
 ### ✅ Integration Testing
+
 - Frontend can connect to backend
 - CORS works
 - API client includes headers correctly
@@ -229,13 +242,15 @@ SELECT * FROM policies;
 To make the app semi-functional for testing:
 
 ### Step 1: Uncomment Frontend API Calls (5 minutes)
+
 Edit `frontend/src/components/ScenarioBuilder.tsx`:
+
 ```typescript
 // Uncomment lines 47-54
 const [materialsRes, machinesRes, policiesRes] = await Promise.all([
-  apiClient.get('/materials'),
-  apiClient.get('/machines'),
-  apiClient.get('/policies'),
+  apiClient.get("/materials"),
+  apiClient.get("/machines"),
+  apiClient.get("/policies"),
 ]);
 setMaterials(materialsRes);
 setMachines(machinesRes);
@@ -243,9 +258,11 @@ setPolicies(policiesRes);
 ```
 
 ### Step 2: Implement Basic Service Layer (2-3 hours)
+
 Create service files and implement basic database queries to return seeded data.
 
 ### Step 3: Complete Recommendation Endpoint (1-2 hours)
+
 Wire up the decision engine to the API endpoint.
 
 ---
@@ -253,26 +270,31 @@ Wire up the decision engine to the API endpoint.
 ## Troubleshooting
 
 ### Backend Won't Start
+
 - **Check**: Python path setup in `backend/main.py` (should be there)
 - **Check**: Dependencies installed (`poetry install`)
 - **Check**: Database running (`docker ps`)
 
 ### Frontend Won't Start
+
 - **Check**: Node modules installed (`npm install` in frontend/)
 - **Check**: Port 3000 not in use
 - **Check**: Backend is running on port 8000
 
 ### API Returns 401/403
+
 - **Check**: API key is optional in development (should work without it)
 - **Check**: `ENVIRONMENT=development` in backend/.env
 - **Check**: CORS settings allow localhost:3000
 
 ### Database Connection Errors
+
 - **Check**: PostgreSQL container is running (`docker ps`)
 - **Check**: `DATABASE_URL` matches docker-compose settings
 - **Check**: Database exists (`docker exec -it <postgres-container> psql -U cnc_user -l`)
 
 ### Empty API Responses
+
 - **Expected**: Materials/machines/policies will return `[]` until service layer is implemented
 - **Workaround**: None - this is expected behavior
 
@@ -283,6 +305,7 @@ Wire up the decision engine to the API endpoint.
 **Can you test locally?** ✅ **YES**
 
 **What works:**
+
 - Application starts
 - UI renders
 - Basic navigation works
@@ -290,11 +313,12 @@ Wire up the decision engine to the API endpoint.
 - Health checks
 
 **What doesn't work:**
+
 - Loading materials/machines/policies (empty arrays)
 - Generating recommendations (501 error)
 - Tool selection in scenario builder
 
-**Status:** Application is **runnable but **partially functional**. You can test the UI and basic functionality, but the decision engine features need service layer implementation to work.
+**Status:** Application is **runnable but **partially functional\*\*. You can test the UI and basic functionality, but the decision engine features need service layer implementation to work.
 
 ---
 
@@ -305,4 +329,3 @@ Wire up the decision engine to the API endpoint.
 3. Complete recommendation endpoint (1-2 hours)
 
 Total: ~4 hours to make it fully functional for local testing.
-
