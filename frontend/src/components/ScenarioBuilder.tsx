@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { XMarkIcon, ArrowRightIcon } from '@heroicons/react/24/outline';
-import { Scenario, Material, Machine, Policy, Operation, OperationType, PolicyWeights } from '@/types/engine';
+import { Scenario, Material, Machine, Policy, Operation, OperationType, PolicyWeights, Recommendation } from '@/types/engine';
 import { apiClient } from '@/lib/api-client';
 
 interface ScenarioBuilderProps {
@@ -67,7 +67,7 @@ export default function ScenarioBuilder({ onClose, onRecommend }: ScenarioBuilde
 
     setGenerating(true);
     try {
-      const response = await apiClient.post('/recommend', {
+      const response = await apiClient.post<Recommendation>('/recommend', {
         tool_id: scenario.tool_id,
         material_id: scenario.material_id,
         machine_id: scenario.machine_id,
@@ -77,7 +77,7 @@ export default function ScenarioBuilder({ onClose, onRecommend }: ScenarioBuilde
         workholding_id: scenario.workholding_id,
         coolant_id: scenario.coolant_id,
       });
-      onRecommend(response.data);
+      onRecommend(response);
     } catch (error: any) {
       console.error('Failed to generate recommendation:', error);
       alert(error.response?.data?.detail || 'Failed to generate recommendation');
@@ -124,14 +124,14 @@ export default function ScenarioBuilder({ onClose, onRecommend }: ScenarioBuilde
         <div className="flex-1 overflow-y-auto p-6">
           {step === 1 && (
             <ToolSelectionStep
-              toolId={scenario.tool_id}
+              toolId={scenario.tool_id || ''}
               onSelect={(toolId) => setScenario({ ...scenario, tool_id: toolId })}
             />
           )}
           {step === 2 && (
             <MaterialSelectionStep
               materials={materials}
-              selectedId={scenario.material_id}
+              selectedId={scenario.material_id || ''}
               onSelect={(materialId) => setScenario({ ...scenario, material_id: materialId })}
               loading={loading}
             />
@@ -139,7 +139,7 @@ export default function ScenarioBuilder({ onClose, onRecommend }: ScenarioBuilde
           {step === 3 && (
             <MachineSelectionStep
               machines={machines}
-              selectedId={scenario.machine_id}
+              selectedId={scenario.machine_id || ''}
               onSelect={(machineId) => setScenario({ ...scenario, machine_id: machineId })}
               loading={loading}
             />
