@@ -8,8 +8,32 @@ from .schemas import (
     EngineTool, Material, Machine, Operation, Workholding, Coolant,
     Policy, PolicyWeights, Recommendation, Signals
 )
+from .schemas.signals import ConstraintType
 from .constraints.feasible_ranges import calculate_feasible_ranges, FeasibleRanges
 from .signals.risk_assessment import calculate_risk_scores, assess_feasibility
+
+# Map substrings found in limiting_constraint descriptions to ConstraintType enum values
+_CONSTRAINT_KEYWORD_MAP = [
+    ("rpm", ConstraintType.SPINDLE_RPM),
+    ("feedrate", ConstraintType.FEEDRATE),
+    ("feed rate", ConstraintType.FEEDRATE),
+    ("chip load", ConstraintType.CHIP_LOAD),
+    ("depth of cut", ConstraintType.DEPTH_OF_CUT),
+    ("power", ConstraintType.POWER),
+    ("torque", ConstraintType.TORQUE),
+    ("rigidity", ConstraintType.RIGIDITY),
+    ("coolant", ConstraintType.COOLANT),
+    ("material", ConstraintType.MATERIAL),
+]
+
+
+def _map_constraint_string(raw: str) -> ConstraintType:
+    """Convert a human-readable limiting_constraint description to a ConstraintType."""
+    lower = raw.lower()
+    for keyword, ctype in _CONSTRAINT_KEYWORD_MAP:
+        if keyword in lower:
+            return ctype
+    return ConstraintType.OTHER
 from .policies import SafetyPolicy, ToolLifePolicy, TimePolicy, BalancedPolicy
 from .arbitration.arbitrator import Arbitrator
 from .explainability.tracer import DecisionTracer, Tracer
@@ -111,7 +135,7 @@ class DecisionEngine:
         dominant_constraint = None
         constraint_severity = 0.0
         if feasible_ranges.limiting_constraints:
-            dominant_constraint = feasible_ranges.limiting_constraints[0]
+            dominant_constraint = _map_constraint_string(feasible_ranges.limiting_constraints[0])
             constraint_severity = 2.0  # Moderate severity
         
         # Build signals
