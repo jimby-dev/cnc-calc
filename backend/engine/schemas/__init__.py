@@ -10,7 +10,7 @@ from .operation import Operation, OperationType
 from .policy import Policy, PolicyType, PolicyWeights
 from .signals import Signals, RiskScore, ConstraintType
 from .recommendation import Recommendation, RecommendationTrace, DecisionNode
-from .tool import Tool as EngineTool  # Re-export tool schema for engine use
+from .tool import EngineTool  # Re-export tool schema for engine use
 
 __all__ = [
     "Material",

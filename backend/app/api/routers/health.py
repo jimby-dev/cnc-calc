@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import text
 from app.core.database import get_db
 from app.core.config import settings
-from app.core.redis_client import get_redis_client
 from schemas.tool import HealthResponse
 from datetime import datetime
 import structlog
@@ -17,20 +16,10 @@ router = APIRouter()
 async def check_database(db: AsyncSession) -> str:
     """Check database connectivity"""
     try:
-        result = await db.execute(text("SELECT 1"))
+        await db.execute(text("SELECT 1"))
         return "healthy"
     except Exception as e:
         logger.error("Database health check failed", error=str(e))
-        return "unhealthy"
-
-async def check_redis() -> str:
-    """Check Redis connectivity using connection pool"""
-    try:
-        redis_client = await get_redis_client()
-        await redis_client.ping()
-        return "healthy"
-    except Exception as e:
-        logger.error("Redis health check failed", error=str(e))
         return "unhealthy"
 
 @router.get("/health", response_model=HealthResponse)
@@ -39,24 +28,17 @@ async def health_check(db: AsyncSession = Depends(get_db)):
     Health check endpoint for monitoring and load balancers
     """
     try:
-        # Check database
         db_status = await check_database(db)
-        
-        # Check Redis
-        redis_status = await check_redis()
-        
-        # Overall status
-        overall_status = "healthy" if db_status == "healthy" and redis_status == "healthy" else "unhealthy"
-        
+        overall_status = "healthy" if db_status == "healthy" else "unhealthy"
+
         return HealthResponse(
             status=overall_status,
             version=settings.VERSION,
             environment=settings.ENVIRONMENT,
             database=db_status,
-            redis=redis_status,
             timestamp=datetime.utcnow()
         )
-        
+
     except Exception as e:
         logger.error("Health check failed", error=str(e))
         raise HTTPException(status_code=503, detail="Service unavailable")
@@ -75,13 +57,14 @@ async def readiness_check(db: AsyncSession = Depends(get_db)):
     """
     try:
         db_status = await check_database(db)
-        redis_status = await check_redis()
-        
-        if db_status == "healthy" and redis_status == "healthy":
+
+        if db_status == "healthy":
             return {"status": "ready", "timestamp": datetime.utcnow()}
         else:
             raise HTTPException(status_code=503, detail="Service not ready")
-            
+
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error("Readiness check failed", error=str(e))
         raise HTTPException(status_code=503, detail="Service not ready")

@@ -129,5 +129,4 @@ class HealthResponse(BaseModel):
     version: str
     environment: str
     database: str
-    redis: str
     timestamp: datetime

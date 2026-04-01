@@ -2,7 +2,6 @@
 Recommendation database model (optional, for storing recommendation history).
 """
 from sqlalchemy import Column, String, JSON, DateTime, Boolean, Float
-from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 import uuid
 
@@ -26,14 +25,14 @@ class Recommendation(Base):
     material_removal_rate_mm3_per_min = Column(Float, nullable=True)
     
     # Signals and confidence
-    signals = Column(JSONB, nullable=False)  # Signals as JSON
+    signals = Column(JSON, nullable=False)  # Signals as JSON
     confidence = Column(Float, nullable=False)
     
     # Explanation trace
-    trace = Column(JSONB, nullable=False)  # RecommendationTrace as JSON
+    trace = Column(JSON, nullable=False)  # RecommendationTrace as JSON
     
     # Input context (for reference)
-    input_context = Column(JSONB, nullable=True)  # Tool, material, machine IDs, etc.
+    input_context = Column(JSON, nullable=True)  # Tool, material, machine IDs, etc.
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False, index=True)
