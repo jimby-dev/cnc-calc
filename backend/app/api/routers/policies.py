@@ -8,8 +8,8 @@ import structlog
 
 from app.core.database import get_db
 from app.core.auth import verify_api_key
-from engine.schemas import Policy, PolicyWeights, Recommendation
-from engine.engine import DecisionEngine
+from engine.schemas import Policy
+from services.policy_service import PolicyService
 
 logger = structlog.get_logger()
 router = APIRouter(prefix="/policies", tags=["policies"])
@@ -17,36 +17,30 @@ router = APIRouter(prefix="/policies", tags=["policies"])
 
 @router.get("/", response_model=List[Policy], dependencies=[Depends(verify_api_key)])
 async def list_policies(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    """
-    List all available policies.
-    """
+    """List all available policies, ordered by priority."""
     try:
-        # TODO: Implement database query
-        # For now, return empty list
-        return []
+        return await PolicyService(db).list_policies()
     except Exception as e:
-        error_type = type(e).__name__
-        logger.error("Failed to list policies", error_type=error_type, exc_info=False)
+        logger.error("Failed to list policies", error_type=type(e).__name__, exc_info=False)
         raise HTTPException(status_code=500, detail="Failed to list policies")
 
 
-@router.post("/test", response_model=Recommendation, dependencies=[Depends(verify_api_key)])
-async def test_policies(
-    # TODO: Add request schema
-    db: AsyncSession = Depends(get_db)
+@router.get("/{policy_id}", response_model=Policy, dependencies=[Depends(verify_api_key)])
+async def get_policy(
+    policy_id: str,
+    db: AsyncSession = Depends(get_db),
 ):
-    """
-    Test policy combinations (for development/debugging).
-    """
+    """Get a specific policy by ID."""
     try:
-        # TODO: Implement policy testing
-        raise HTTPException(status_code=501, detail="Policy testing not yet implemented")
+        policy = await PolicyService(db).get_policy(policy_id)
+        if policy is None:
+            raise HTTPException(status_code=404, detail=f"Policy '{policy_id}' not found")
+        return policy
     except HTTPException:
         raise
     except Exception as e:
-        error_type = type(e).__name__
-        logger.error("Failed to test policies", error_type=error_type, exc_info=False)
-        raise HTTPException(status_code=500, detail="Failed to test policies")
+        logger.error("Failed to get policy", policy_id=policy_id, error_type=type(e).__name__, exc_info=False)
+        raise HTTPException(status_code=500, detail="Failed to get policy")
 
