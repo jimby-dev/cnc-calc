@@ -2,11 +2,9 @@
 Recommendation schema for decision engine output.
 """
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
+from typing import Optional, List, Dict, Any
 from datetime import datetime
-
-if TYPE_CHECKING:
-    from .signals import Signals
+from .signals import Signals
 
 
 class DecisionNode(BaseModel):
@@ -53,7 +51,7 @@ class Recommendation(BaseModel):
     material_removal_rate_mm3_per_min: Optional[float] = Field(None, gt=0, description="MRR (mm³/min)")
     
     # Confidence and signals
-    signals: "Signals" = Field(..., description="Risk signals and constraints")
+    signals: Signals = Field(..., description="Risk signals and constraints")
     confidence: float = Field(..., ge=0, le=1, description="Overall confidence (0-1)")
     
     # Explanation

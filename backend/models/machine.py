@@ -2,7 +2,6 @@
 Machine database model.
 """
 from sqlalchemy import Column, String, JSON, DateTime, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 import uuid
 
@@ -16,7 +15,7 @@ class Machine(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False, index=True)
     type = Column(String, nullable=False, index=True)
-    capabilities = Column(JSONB, nullable=False)  # MachineCapabilities as JSON
+    capabilities = Column(JSON, nullable=False)  # MachineCapabilities as JSON
     
     # Metadata
     manufacturer = Column(String, nullable=True)

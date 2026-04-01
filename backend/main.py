@@ -9,14 +9,11 @@ from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 import structlog
 import uvicorn
 
 from app.core.config import settings
-from app.core.redis_client import close_redis_pool
 from app.core.auth import verify_api_key
-from app.core.rate_limit import RateLimitMiddleware
 from app.api.routers import tools, health, recommend, materials, policies, machines
 
 # Configure structured logging
@@ -47,12 +44,6 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/docs" if settings.ENVIRONMENT != "production" else None,
     redoc_url="/redoc" if settings.ENVIRONMENT != "production" else None,
-)
-
-# Rate limiting middleware (applied first)
-app.add_middleware(
-    RateLimitMiddleware,
-    requests_per_minute=settings.RATE_LIMIT_PER_MINUTE
 )
 
 # CORS middleware
@@ -90,7 +81,6 @@ async def startup_event():
 async def shutdown_event():
     """Cleanup on shutdown"""
     logger.info("Shutting down CNC Calculator API")
-    await close_redis_pool()
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request, exc):

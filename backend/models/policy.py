@@ -2,7 +2,6 @@
 Policy database model.
 """
 from sqlalchemy import Column, String, JSON, DateTime, Boolean, Integer
-from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 import uuid
 
@@ -16,8 +15,8 @@ class Policy(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False, index=True)
     type = Column(String, nullable=False, index=True)
-    weights = Column(JSONB, nullable=False)  # PolicyWeights as JSON
-    rules = Column(JSONB, nullable=False, default={})  # Policy rules as JSON
+    weights = Column(JSON, nullable=False)  # PolicyWeights as JSON
+    rules = Column(JSON, nullable=False, default={})  # Policy rules as JSON
     
     # Priority (lower = higher priority)
     priority = Column(Integer, default=100, nullable=False, index=True)

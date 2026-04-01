@@ -2,7 +2,6 @@
 Material database model.
 """
 from sqlalchemy import Column, String, JSON, DateTime, Boolean
-from sqlalchemy.dialects.postgresql import JSONB
 from datetime import datetime
 import uuid
 
@@ -16,7 +15,7 @@ class Material(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     name = Column(String, nullable=False, index=True)
     category = Column(String, nullable=False, index=True)
-    properties = Column(JSONB, nullable=False)  # MaterialProperties as JSON
+    properties = Column(JSON, nullable=False)  # MaterialProperties as JSON
     
     # Metadata
     description = Column(String, nullable=True)
