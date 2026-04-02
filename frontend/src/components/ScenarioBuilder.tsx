@@ -42,16 +42,14 @@ export default function ScenarioBuilder({ onClose, onRecommend }: ScenarioBuilde
   const loadData = async () => {
     setLoading(true);
     try {
-      // Load materials, machines, policies
-      // TODO: Implement API calls once backend services are ready
-      // const [materialsRes, machinesRes, policiesRes] = await Promise.all([
-      //   apiClient.get('/materials'),
-      //   apiClient.get('/machines'),
-      //   apiClient.get('/policies'),
-      // ]);
-      // setMaterials(materialsRes.data);
-      // setMachines(machinesRes.data);
-      // setPolicies(policiesRes.data);
+      const [materialsData, machinesData, policiesData] = await Promise.all([
+        apiClient.get<Material[]>('/api/materials'),
+        apiClient.get<Machine[]>('/api/machines'),
+        apiClient.get<Policy[]>('/api/policies'),
+      ]);
+      setMaterials(materialsData);
+      setMachines(machinesData);
+      setPolicies(policiesData);
     } catch (error) {
       console.error('Failed to load data:', error);
     } finally {
@@ -67,7 +65,7 @@ export default function ScenarioBuilder({ onClose, onRecommend }: ScenarioBuilde
 
     setGenerating(true);
     try {
-      const response = await apiClient.post<Recommendation>('/recommend', {
+      const response = await apiClient.post<Recommendation>('/api/recommend', {
         tool_id: scenario.tool_id,
         material_id: scenario.material_id,
         machine_id: scenario.machine_id,
