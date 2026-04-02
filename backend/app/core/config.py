@@ -37,6 +37,9 @@ class Settings(BaseSettings):
         "http://localhost:3000",
         "http://localhost:3001",
         "http://127.0.0.1:3000",
+        # Tauri 2.x webview origins (production builds)
+        "tauri://localhost",
+        "http://tauri.localhost",
     ]
     ALLOWED_HOSTS: List[str] = ["localhost", "127.0.0.1"]
     
